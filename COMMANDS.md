@@ -73,6 +73,12 @@ baton wait <id> [--timeout 30m]
 ```
 *Note*: Exits with code `0` when receipt lands (`received`/`closed`). Automatically wakes up your coding agent session. Exits with `124` on timeout.
 
+### `baton prompt`
+Generate the standard, copy-pasteable baton pass prompt for manual cross-session/window relay.
+```bash
+baton prompt <id>
+```
+
 ### `baton receipt`
 Register an execution receipt and transition ticket to `received`.
 ```bash

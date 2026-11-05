@@ -72,6 +72,12 @@ baton forward <id> --blind --wait
 baton wait <id> [--timeout 30m]
 ```
 
+### `baton prompt`
+生成标准可复制的接单提示词，供人类用户在多会话/多窗口间一键流转。
+```bash
+baton prompt <id>
+```
+
 ### `baton receipt`
 登记执行回执并将状态推进至 `received`。
 ```bash
