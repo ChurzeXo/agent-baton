@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth">
+<html lang="zh" class="dark scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Baton — Evidence-First, Zero-Trust Handoff Protocol for AI Coding Agents</title>
-  <meta name="description" content="Pass the baton between AI coding agents with cryptographic proofs, zero-token reactive sleep, and strict anti-spoofing audit gates.">
-  
+  <title>Agent Baton — AI 编程交接棒与状态探针</title>
+  <meta name="description" content="AI 编程接力协议与状态探针：必须附带真实代码改动，状态探针静默待机、完成后自动唤醒。">
+
   <!-- Open Graph -->
-  <meta property="og:title" content="Agent Baton — Protocol for AI Coding Agents">
-  <meta property="og:description" content="Evidence-first, double-blind audit protocol and CLI for multi-agent workflows.">
+  <meta property="og:title" content="Agent Baton — AI 编程交接棒与状态探针">
+  <meta property="og:description" content="提交必须带真实代码证据，状态探针静默待机、完成后毫秒级自动唤醒。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://churzexo.github.io/agent-baton/">
 
@@ -25,7 +25,7 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
@@ -42,634 +42,494 @@
 
   <style>
     body {
-      background-color: #07090e;
-      color: #e2e8f0;
+      background-color: #080a10;
+      color: #f1f5f9;
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .bg-grid {
-      background-size: 36px 36px;
+      background-size: 40px 40px;
       background-image: 
         linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
-    .glow-radial {
-      background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.18), transparent 60%);
+    .hero-glow {
+      background: radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.22), transparent 70%);
     }
-    .terminal-box {
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 35px -5px rgba(16, 185, 129, 0.15);
+    .card-glow {
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px -5px rgba(16, 185, 129, 0.12);
     }
-    .badge-glow {
-      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
-    }
-    .code-glow {
-      box-shadow: 0 0 30px -10px rgba(16, 185, 129, 0.2);
+    .pulse-glow {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-brand-500 selection:text-black bg-grid relative overflow-x-hidden">
 
-  <!-- Ambient Lighting Layer -->
-  <div class="fixed inset-0 glow-radial pointer-events-none -z-10"></div>
+  <!-- Ambient Light -->
+  <div class="fixed inset-0 hero-glow pointer-events-none -z-10"></div>
 
-  <!-- Top Announcement Bar -->
-  <aside class="border-b border-white/5 bg-brand-500/10 text-brand-400 py-1.5 px-4 text-center text-xs font-mono font-medium flex items-center justify-center space-x-2">
-    <span class="flex h-2 w-2 relative">
-      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
-      <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
-    </span>
-    <span data-i18n="top-banner">v2.16.0 Protocol Released — Double-Blind Audit Gates & Ephemeral Challenge Nonces</span>
-  </aside>
-
-  <!-- Navigation -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#07090e]/80 border-b border-white/5">
-    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+  <!-- Header -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#080a10]/80 border-b border-white/5">
+    <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
       
       <!-- Logo -->
-      <a href="#" class="flex items-center space-x-3 group">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-emerald-300 flex items-center justify-center font-bold text-black shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
-          <svg class="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m18 15-6-6-6 6"/>
-            <path d="M12 9v12"/>
-          </svg>
+      <a href="#" class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-300 flex items-center justify-center text-black font-black text-lg shadow-md shadow-brand-500/20">
+          🪄
         </div>
-        <div class="flex flex-col">
-          <div class="flex items-center space-x-2">
-            <span class="font-bold text-lg tracking-tight text-white">Agent Baton</span>
-            <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">baton</span>
-          </div>
+        <div class="flex items-center space-x-2">
+          <span class="font-bold text-lg tracking-tight text-white">Agent Baton</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 font-mono border border-brand-500/20">v1.0</span>
         </div>
       </a>
 
-      <!-- Desktop Links -->
-      <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
-        <a href="#why" class="hover:text-white transition-colors" data-i18n="nav-why">Why Baton</a>
-        <a href="#architecture" class="hover:text-white transition-colors" data-i18n="nav-arch">Architecture</a>
-        <a href="#workflow" class="hover:text-white transition-colors" data-i18n="nav-workflow">Workflow</a>
-        <a href="#commands" class="hover:text-white transition-colors" data-i18n="nav-commands">CLI Manual</a>
-        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/DESIGN.md" target="_blank" class="hover:text-white transition-colors" data-i18n="nav-design">Whitepaper</a>
-      </nav>
-
-      <!-- Actions -->
-      <div class="flex items-center space-x-3">
+      <!-- Quick Nav & Language -->
+      <div class="flex items-center space-x-4">
+        <a href="#probe-section" class="hidden sm:inline-block text-xs font-semibold text-slate-300 hover:text-white transition-colors" data-i18n="nav-feature">
+          交接状态探针
+        </a>
+        <a href="#quickstart" class="hidden sm:inline-block text-xs font-semibold text-slate-300 hover:text-white transition-colors" data-i18n="nav-quick">
+          30秒上手
+        </a>
+        
         <!-- Language Switcher -->
-        <button id="lang-toggle" class="px-3 py-1.5 text-xs font-mono font-medium rounded-lg border border-white/10 hover:border-brand-500/40 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all flex items-center space-x-1.5">
+        <button id="lang-btn" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-white/10 hover:border-brand-500/40 bg-white/5 hover:bg-white/10 text-slate-200 transition-all flex items-center space-x-1.5">
           <span>🌐</span>
-          <span id="lang-label">中文</span>
+          <span id="lang-text">English</span>
         </button>
 
-        <!-- GitHub Button -->
-        <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" class="flex items-center space-x-2 text-xs font-medium px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/10 hover:border-white/20 transition-all shadow-sm">
+        <!-- GitHub -->
+        <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors" title="GitHub">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-          <span>Star</span>
         </a>
       </div>
     </div>
   </header>
 
-  <!-- Hero Section -->
   <main class="flex-grow">
-    <section class="pt-20 pb-16 px-6 text-center max-w-5xl mx-auto">
+    
+    <!-- Hero Section: 通俗简洁、直击痛点 -->
+    <section class="pt-16 pb-12 px-6 text-center max-w-4xl mx-auto">
       
-      <!-- Tag Pill -->
-      <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-400 text-xs font-mono font-medium mb-8 badge-glow">
+      <!-- Feature Pill -->
+      <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-400 text-xs font-semibold mb-6">
         <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-        <span data-i18n="badge-hero">Evidence-First, Zero-Trust Handoff Protocol</span>
+        <span data-i18n="hero-tag">专为多 AI 协同编程设计</span>
       </div>
 
       <!-- Main Headline -->
-      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1] mb-8" data-i18n="hero-title">
-        Pass the Baton Between AI Agents with <br class="hidden sm:inline"/>
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-emerald-300 to-teal-200">Cryptographic Proofs</span>
+      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15] mb-6" data-i18n="hero-h1">
+        AI 接力写代码，<br class="hidden sm:inline"/>
+        用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话
       </h1>
 
-      <!-- Subtitle -->
-      <p class="text-base sm:text-xl text-slate-400 font-normal max-w-3xl mx-auto mb-10 leading-relaxed" data-i18n="hero-desc">
-        A zero-dependency, Git-native handoff engine for autonomous coding agents (Claude Code, Cursor, Codex, OpenHands). Enforcing double-blind audits, anti-spoofing challenge nonces, and 0-token reactive sleep.
+      <!-- Plain Subhead -->
+      <p class="text-base sm:text-lg text-slate-300 font-normal max-w-2xl mx-auto mb-8 leading-relaxed" data-i18n="hero-p">
+        别再让 AI “假装完成代码”。Baton 强制要求提供真实 Git 提交和修改文件；独特的<strong>交接状态探针</strong>让你在交接后 0 消耗静默待机，代码一完成瞬间自动唤醒！
       </p>
 
-      <!-- Install Snippet Box -->
-      <div class="inline-flex items-center justify-between p-2 rounded-2xl bg-slate-900/90 border border-white/10 shadow-2xl max-w-lg w-full mb-8 code-glow backdrop-blur-md">
-        <div class="flex items-center space-x-3 pl-3 font-mono text-sm text-slate-300">
+      <!-- Quick Command Box -->
+      <div class="inline-flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-white/10 shadow-xl max-w-md w-full mb-6">
+        <div class="flex items-center space-x-3 pl-3 font-mono text-sm text-slate-200">
           <span class="text-brand-400 font-bold select-none">$</span>
-          <span class="text-white font-medium">npm install -g agent-baton</span>
+          <span>npm install -g agent-baton</span>
         </div>
-        <button id="copy-btn" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-brand-500 hover:text-black text-xs font-semibold font-mono text-white transition-all flex items-center space-x-1.5 active:scale-95">
-          <span id="copy-text" data-i18n="btn-copy">Copy</span>
+        <button id="copy-btn" class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-brand-500 hover:text-black text-xs font-semibold text-white transition-all">
+          <span id="copy-txt" data-i18n="btn-copy">复制</span>
         </button>
       </div>
 
-      <!-- CTA Links -->
-      <div class="flex flex-wrap items-center justify-center gap-4 mb-14">
-        <a href="#workflow" class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-400 hover:to-emerald-500 text-black font-bold text-sm transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transform hover:-translate-y-0.5" data-i18n="btn-quickstart">
-          Explore Workflow &rarr;
-        </a>
-        <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" class="px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-sm border border-white/10 hover:border-white/20 transition-all flex items-center space-x-2 transform hover:-translate-y-0.5">
-          <span>View on GitHub</span>
-          <span class="text-brand-400">&starf;</span>
-        </a>
-      </div>
-
-      <!-- Verified Shields Row -->
-      <div class="flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-slate-400">
-        <span class="px-3 py-1 rounded-md bg-white/5 border border-white/10">Node >= 18.0</span>
-        <span class="px-3 py-1 rounded-md bg-white/5 border border-white/10">Zero Dependencies</span>
-        <span class="px-3 py-1 rounded-md bg-white/5 border border-white/10">MIT License</span>
-        <span class="px-3 py-1 rounded-md bg-white/5 border border-white/10">POSIX & macOS Native</span>
+      <!-- Secondary Links -->
+      <div class="flex items-center justify-center space-x-4 text-xs text-slate-400 font-medium">
+        <span>✅ 纯 Node 原生（零第三方依赖）</span>
+        <span>•</span>
+        <span>✅ 兼容 Claude Code / Cursor / Codex</span>
       </div>
     </section>
 
-    <!-- Interactive Terminal Showcase -->
-    <section class="max-w-5xl mx-auto px-6 mb-28">
-      <div class="rounded-2xl border border-white/10 bg-[#0a0d14] terminal-box overflow-hidden font-mono text-xs sm:text-sm">
-        
-        <!-- Terminal Titlebar -->
-        <div class="h-11 bg-[#121622] border-b border-white/5 px-4 flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
-            <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
-            <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
-          </div>
-          <div class="text-xs text-slate-400 font-sans font-medium flex items-center space-x-2">
-            <span class="text-brand-400">&bull;</span>
-            <span>baton choreography simulator</span>
-          </div>
-          <div class="w-10"></div>
+    <!-- ★ 最醒目位置：证据交接流程与【交接状态探针】核心特色 ★ -->
+    <section id="probe-section" class="py-12 px-6 max-w-4xl mx-auto">
+      
+      <!-- Section Title -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center space-x-1.5 text-brand-400 text-xs font-mono font-bold tracking-wider uppercase mb-2">
+          <span>⚡ CORE FEATURE</span>
         </div>
-
-        <!-- Terminal Tabs -->
-        <div class="flex overflow-x-auto border-b border-white/5 bg-[#0a0d14] text-xs scrollbar-none">
-          <button class="term-tab px-4 py-3 border-b-2 border-brand-400 text-brand-400 font-semibold whitespace-nowrap" onclick="switchTerm(0)">1. Create Ticket</button>
-          <button class="term-tab px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap" onclick="switchTerm(1)">2. Double-Blind Forward</button>
-          <button class="term-tab px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap" onclick="switchTerm(2)">3. Terminal Verification</button>
-          <button class="term-tab px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap" onclick="switchTerm(3)">4. Reactive Wakeup</button>
-        </div>
-
-        <!-- Terminal Code Screen -->
-        <div id="term-content" class="p-6 text-slate-300 leading-relaxed min-h-[240px] overflow-x-auto">
-          <!-- Populated by JavaScript -->
-        </div>
-      </div>
-    </section>
-
-    <!-- Architecture Visualizer -->
-    <section id="architecture" class="py-20 border-t border-white/5 bg-slate-950/40 px-6">
-      <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4" data-i18n="arch-title">Zero-Trust Architecture</h2>
-          <p class="text-slate-400 max-w-2xl mx-auto" data-i18n="arch-desc">
-            How Baton isolates cognitive biases and enforces physical evidence through strict separation of duties.
-          </p>
-        </div>
-
-        <!-- Workflow Visual Flow Diagram -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
-          
-          <!-- Node 1 -->
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/40 transition-all flex flex-col justify-between">
-            <div>
-              <div class="text-xs font-mono font-bold text-brand-400 mb-2">LANE: ARCH</div>
-              <h3 class="text-lg font-bold text-white mb-2" data-i18n="node1-title">Contract Planning</h3>
-              <p class="text-xs text-slate-400 leading-relaxed" data-i18n="node1-desc">
-                Specifies objective invariants, input/output schemas, and test acceptance commands in structured Markdown.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-white/5 font-mono text-[11px] text-slate-400">
-              <code>baton new impl task &quot;...&quot;</code>
-            </div>
-          </div>
-
-          <!-- Node 2 -->
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/40 transition-all flex flex-col justify-between">
-            <div>
-              <div class="text-xs font-mono font-bold text-amber-400 mb-2">LANE: IMPL</div>
-              <h3 class="text-lg font-bold text-white mb-2" data-i18n="node2-title">Code Implementation</h3>
-              <p class="text-xs text-slate-400 leading-relaxed" data-i18n="node2-desc">
-                Developer Agent finishes code changes, commits to local Git, and initiates transfer for independent review.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-white/5 font-mono text-[11px] text-slate-400">
-              <code>baton forward --wait --blind</code>
-            </div>
-          </div>
-
-          <!-- Node 3: The Filter Gate -->
-          <div class="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col justify-between relative shadow-lg shadow-emerald-500/5">
-            <div>
-              <div class="text-xs font-mono font-bold text-emerald-400 mb-2">CHALLENGE GATE</div>
-              <h3 class="text-lg font-bold text-white mb-2" data-i18n="node3-title">Double-Blind Sanitizer</h3>
-              <p class="text-xs text-slate-300 leading-relaxed" data-i18n="node3-desc">
-                Physically strips LLM &lt;thinking&gt; and reasoning excuses. Generates ephemeral cryptographic Nonce.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-emerald-500/20 font-mono text-[11px] text-emerald-300">
-              <span>Issued: aud_9f81a7b63e2c</span>
-            </div>
-          </div>
-
-          <!-- Node 4 -->
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/40 transition-all flex flex-col justify-between">
-            <div>
-              <div class="text-xs font-mono font-bold text-cyan-400 mb-2">LANE: AUDIT</div>
-              <h3 class="text-lg font-bold text-white mb-2" data-i18n="node4-title">Independent Audit</h3>
-              <p class="text-xs text-slate-400 leading-relaxed" data-i18n="node4-desc">
-                Terminal commands executed independently. Evidence SHA confirmed on disk via git cat-file. Nonce burned.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-white/5 font-mono text-[11px] text-slate-400">
-              <code>baton receipt --audit-nonce</code>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Why Baton vs Common Pitfalls -->
-    <section id="why" class="py-24 px-6 max-w-6xl mx-auto">
-      <div class="text-center mb-16">
-        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4" data-i18n="why-title">Why Multi-Agent Systems Fail Without Baton</h2>
-        <p class="text-slate-400 max-w-2xl mx-auto" data-i18n="why-desc">
-          Autonomous coding agents are brilliant at typing code, but catastrophic at self-governance. Baton replaces naive conversational agreements with hard invariants.
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2" data-i18n="probe-title">
+          交接状态探针：怎么让 AI 自动闭环？
+        </h2>
+        <p class="text-sm text-slate-400 max-w-lg mx-auto" data-i18n="probe-desc">
+          无需你在多个 AI 窗口间人肉复制粘贴，更不跑死循环发烫。
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Interactive Probe Visualizer Container -->
+      <div class="rounded-2xl border border-white/10 bg-[#0d1017] card-glow overflow-hidden">
         
-        <!-- Pillar 1 -->
-        <div class="p-7 rounded-2xl border border-white/10 bg-slate-900/50 hover:border-rose-500/40 transition-all">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-3">
-              <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-sm">PITFALL</span>
-              <h3 class="font-bold text-white text-lg" data-i18n="p1-bad-title">Hallucinated Completions</h3>
-            </div>
-            <span class="text-rose-400 font-mono text-xs font-bold">&cross; Fake Receipts</span>
+        <!-- Probe Top Status Bar -->
+        <div class="bg-slate-900/90 border-b border-white/5 px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center space-x-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-brand-400 animate-ping"></span>
+            <span class="font-mono font-semibold text-white" data-i18n="probe-live-label">探针模式: 0-Token 事件驱动监听</span>
           </div>
-          <p class="text-sm text-slate-400 mb-6 leading-relaxed" data-i18n="p1-bad-desc">
-            Agent reports: &quot;Refactored authentication, updated 14 modules, all 42 tests passing.&quot; In reality, zero files were modified on disk. Naive orchestrators accept the claim and merge.
-          </p>
-          <div class="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs font-mono text-brand-300">
-            <span class="font-bold text-brand-400">🛡️ Baton Guarantee:</span> <span data-i18n="p1-good">Requires verifiable Git commit SHA (<code class="bg-black/50 px-1 py-0.5 rounded text-white">git cat-file -e</code>) & non-empty file modifications.</span>
+          <div class="flex items-center space-x-2 text-slate-400 font-mono text-[11px]">
+            <span class="px-2 py-0.5 rounded bg-black/40 border border-white/5">CPU: 0.0%</span>
+            <span class="px-2 py-0.5 rounded bg-black/40 border border-white/5">Token: 0</span>
           </div>
         </div>
 
-        <!-- Pillar 2 -->
-        <div class="p-7 rounded-2xl border border-white/10 bg-slate-900/50 hover:border-rose-500/40 transition-all">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-3">
-              <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-sm">PITFALL</span>
-              <h3 class="font-bold text-white text-lg" data-i18n="p2-bad-title">Sycophancy & Priming Bias</h3>
-            </div>
-            <span class="text-rose-400 font-mono text-xs font-bold">&cross; Biased Reviews</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-6 leading-relaxed" data-i18n="p2-bad-desc">
-            Reviewer Agent reads the author's internal reasoning and rationalizations (&quot;I skipped the corner cases because of XYZ&quot;), leading to polite rubber-stamping.
-          </p>
-          <div class="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs font-mono text-brand-300">
-            <span class="font-bold text-brand-400">🙈 Baton Guarantee:</span> <span data-i18n="p2-good">Double-Blind Sanitizer (<code class="bg-black/50 px-1 py-0.5 rounded text-white">--blind</code>) strips CoT & excuses. Reviewer sees only pure requirements & code diff.</span>
-          </div>
+        <!-- 3-Step Clickable Navigation -->
+        <div class="grid grid-cols-3 border-b border-white/5 text-xs text-center font-medium bg-slate-950/50">
+          <button class="step-tab py-3.5 px-2 border-b-2 border-brand-400 text-brand-400 font-bold flex items-center justify-center space-x-1.5" onclick="setStep(0)">
+            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-[10px]">1</span>
+            <span data-i18n="step1-tab">发起交接 & 探针待机</span>
+          </button>
+          <button class="step-tab py-3.5 px-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center space-x-1.5" onclick="setStep(1)">
+            <span class="w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center text-[10px]">2</span>
+            <span data-i18n="step2-tab">接收方提交真实证据</span>
+          </button>
+          <button class="step-tab py-3.5 px-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center space-x-1.5" onclick="setStep(2)">
+            <span class="w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center text-[10px]">3</span>
+            <span data-i18n="step3-tab">探针瞬间自动唤醒！</span>
+          </button>
         </div>
 
-        <!-- Pillar 3 -->
-        <div class="p-7 rounded-2xl border border-white/10 bg-slate-900/50 hover:border-rose-500/40 transition-all">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-3">
-              <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-sm">PITFALL</span>
-              <h3 class="font-bold text-white text-lg" data-i18n="p3-bad-title">Self-Signing Loopholes</h3>
-            </div>
-            <span class="text-rose-400 font-mono text-xs font-bold">&cross; Self-Approval</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-6 leading-relaxed" data-i18n="p3-bad-desc">
-            A single session toggles its environment variable or agent prompt, reviews its own output, and signs its own completion ticket without independent oversight.
-          </p>
-          <div class="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs font-mono text-brand-300">
-            <span class="font-bold text-brand-400">🔐 Baton Guarantee:</span> <span data-i18n="p3-good">Ephemeral challenge nonces generated during forward are wiped upon verification. Cross-lane self-signing is cryptographically blocked.</span>
-          </div>
-        </div>
-
-        <!-- Pillar 4 -->
-        <div class="p-7 rounded-2xl border border-white/10 bg-slate-900/50 hover:border-rose-500/40 transition-all">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-3">
-              <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400 font-bold text-sm">PITFALL</span>
-              <h3 class="font-bold text-white text-lg" data-i18n="p4-bad-title">Token Drain & Polling Burn</h3>
-            </div>
-            <span class="text-rose-400 font-mono text-xs font-bold">&cross; Burnout Loops</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-6 leading-relaxed" data-i18n="p4-bad-desc">
-            Waiting for peer agent tasks using fixed polling intervals consumes thousands of LLM tokens, wastes battery life, and hammers developer machines.
-          </p>
-          <div class="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs font-mono text-brand-300">
-            <span class="font-bold text-brand-400">⚡ Baton Guarantee:</span> <span data-i18n="p4-good">Kernel-level <code class="bg-black/50 px-1 py-0.5 rounded text-white">fs.watch</code> event sleep. Zero tokens consumed during waiting; auto wakes up upon ticket status flip.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Workflow: Deterministic 4-Step -->
-    <section id="workflow" class="py-20 border-t border-white/5 bg-slate-950/40 px-6">
-      <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4" data-i18n="wf-title">The Deterministic 4-Step Lifecycle</h2>
-          <p class="text-slate-400 max-w-xl mx-auto" data-i18n="wf-desc">
-            Every task advances through a strict, finite state machine: Draft &rarr; Forwarded &rarr; Received &rarr; Closed.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Step Interactive Body -->
+        <div class="p-6 sm:p-8">
           
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 relative">
-            <div class="text-brand-400 font-mono text-xs font-bold mb-2">STEP 01</div>
-            <h4 class="font-bold text-white text-base mb-2" data-i18n="wf1-h">Create Ticket</h4>
-            <div class="bg-black/40 p-2.5 rounded-lg font-mono text-[11px] text-brand-300 mb-3">
-              baton new audit task &quot;Auth Spec&quot;
+          <!-- Step 1 View -->
+          <div id="step-0" class="step-panel space-y-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono font-bold text-brand-400 uppercase">Step 01 / 发起交接</span>
+                <h3 class="text-lg font-bold text-white mt-1" data-i18n="s1-title">交代任务并挂起探针，AI 进入“静音休眠”</h3>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="s1-desc">发起方 AI 交代好修改目标后，执行转递命令。探针立即在后台挂起，等待期间不耗电脑性能、不耗 Token。</p>
+              </div>
+              <span class="text-3xl select-none">💤</span>
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed" data-i18n="wf1-p">
-              Author lane documents invariants, boundary tests, and expected Git evidence.
-            </p>
+
+            <!-- Command & Terminal Box -->
+            <div class="rounded-xl bg-black/60 border border-white/5 p-4 font-mono text-xs text-slate-300 space-y-2">
+              <div class="text-slate-500"># 发起交接并进入后台监听探针（一条命令搞定）</div>
+              <div class="text-brand-300 font-semibold">$ baton forward audit-20261105-01-task --wait</div>
+              <div class="text-slate-400">
+                &rarr; 已生成接单提示词，供直接转递接收方<br>
+                &rarr; <span class="text-amber-300 font-medium">探针已就绪：正在后台静音待机...（0 Token 开销）</span>
+              </div>
+            </div>
           </div>
 
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 relative">
-            <div class="text-brand-400 font-mono text-xs font-bold mb-2">STEP 02</div>
-            <h4 class="font-bold text-white text-base mb-2" data-i18n="wf2-h">Double-Blind Transfer</h4>
-            <div class="bg-black/40 p-2.5 rounded-lg font-mono text-[11px] text-amber-300 mb-3">
-              baton forward &lt;id&gt; --blind --wait
+          <!-- Step 2 View -->
+          <div id="step-1" class="step-panel hidden space-y-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono font-bold text-amber-400 uppercase">Step 02 / 真实改动门禁</span>
+                <h3 class="text-lg font-bold text-white mt-1" data-i18n="s2-title">拒绝“口头改完”！接收方必须携带真实 Commit 与改动文件</h3>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="s2-desc">接收方 AI 施工完毕后提交回执。系统底层会物理检查 Git 提交历史和真实文件，嘴上说改了但没动代码的直接打回！</p>
+              </div>
+              <span class="text-3xl select-none">🔍</span>
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed" data-i18n="wf2-p">
-              Sanitizes subjective CoT, issues challenge Nonce, and sleeps with zero Token burn.
-            </p>
+
+            <div class="rounded-xl bg-black/60 border border-white/5 p-4 font-mono text-xs text-slate-300 space-y-2">
+              <div class="text-slate-500"># 接收方提交回执（必须带真实提交哈希与修改路径）</div>
+              <div class="text-amber-300 font-semibold">$ baton receipt audit-20261105-01-task \</div>
+              <div class="text-slate-300 pl-4">--evidence-paths "src/auth.ts,tests/auth.test.ts" \</div>
+              <div class="text-slate-300 pl-4">--evidence-commits "a1b2c3d" \</div>
+              <div class="text-slate-300 pl-4">-n "## 结论\n已在终端独立运行测试，全部通过。"</div>
+              <div class="text-emerald-400 pt-1">✅ 检查通过：Commit a1b2c3d 真实有效，回执已登记！</div>
+            </div>
           </div>
 
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 relative">
-            <div class="text-brand-400 font-mono text-xs font-bold mb-2">STEP 03</div>
-            <h4 class="font-bold text-white text-base mb-2" data-i18n="wf3-h">Independent Review</h4>
-            <div class="bg-black/40 p-2.5 rounded-lg font-mono text-[11px] text-cyan-300 mb-3">
-              baton receipt &lt;id&gt; --nonce ...
+          <!-- Step 3 View -->
+          <div id="step-2" class="step-panel hidden space-y-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-mono font-bold text-emerald-400 uppercase">Step 03 / 探针毫秒自动唤醒</span>
+                <h3 class="text-lg font-bold text-white mt-1" data-i18n="s3-title">回执一落盘，探针立刻 Exit 0，发起方 AI 自动醒来收尾！</h3>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="s3-desc">底层基于操作系统的文件事件通知（fs.watch）。当真实回执保存的瞬间，休眠的发起方立刻被唤醒，自动完成闭环验收。</p>
+              </div>
+              <span class="text-3xl select-none">⚡</span>
             </div>
-            <p class="text-xs text-slate-400 leading-relaxed" data-i18n="wf3-p">
-              Auditor executes shell commands in terminal and signs receipt with valid Nonce.
-            </p>
+
+            <div class="rounded-xl bg-black/60 border border-emerald-500/20 p-4 font-mono text-xs text-slate-300 space-y-2">
+              <div class="text-emerald-400 font-semibold">🎉 [探针感知] 检测到 audit-20261105-01-task 真实回执已落地！</div>
+              <div class="text-slate-300">⚡ 发起方 AI 会话被自动唤醒（退出码 0），开始验收：</div>
+              <div class="text-brand-300 pt-1">$ baton check && baton accept audit-20261105-01-task -n "已复核代码改动，验收合入！"</div>
+              <div class="text-emerald-400 font-bold">🏁 任务顺利闭环！全程无需人工传话。</div>
+            </div>
           </div>
 
-          <div class="p-6 rounded-2xl bg-white/5 border border-white/10 relative">
-            <div class="text-brand-400 font-mono text-xs font-bold mb-2">STEP 04</div>
-            <h4 class="font-bold text-white text-base mb-2" data-i18n="wf4-h">Reactive Acceptance</h4>
-            <div class="bg-black/40 p-2.5 rounded-lg font-mono text-[11px] text-emerald-300 mb-3">
-              baton accept &lt;id&gt; -n &quot;Verified&quot;
-            </div>
-            <p class="text-xs text-slate-400 leading-relaxed" data-i18n="wf4-p">
-              Author wakes up instantly upon file event, runs preflight verification, and closes.
-            </p>
-          </div>
         </div>
+
+        <!-- Flow Visual Bar -->
+        <div class="bg-slate-900/70 border-t border-white/5 px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-brand-400">💡</span>
+            <span data-i18n="probe-bottom-tip">核心价值：<strong>不信嘴说、不耗待机 Token、自动唤醒闭环</strong>。</span>
+          </div>
+          <button onclick="nextStep()" class="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center space-x-1">
+            <span data-i18n="probe-next">下一步演示</span>
+            <span>&rarr;</span>
+          </button>
+        </div>
+
       </div>
     </section>
 
-    <!-- CLI Cheatsheet -->
-    <section id="commands" class="py-24 px-6 max-w-5xl mx-auto">
-      <div class="text-center mb-16">
-        <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4" data-i18n="cmd-title">Command Quick Reference</h2>
-        <p class="text-slate-400" data-i18n="cmd-desc">Unified CLI engine. All commands work identically via <code class="text-brand-400 font-mono">baton</code> or <code class="text-brand-400 font-mono">handoff</code>.</p>
+    <!-- 普通人也能懂的三大改变 -->
+    <section class="py-16 px-6 max-w-4xl mx-auto border-t border-white/5">
+      <div class="text-center mb-12">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2" data-i18n="diff-title">
+          用 Baton 写代码，体验有什么不同？
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400" data-i18n="diff-desc">普通开发者用 AI 协作时最容易踩的坑，一次性解决</p>
       </div>
 
-      <div class="rounded-2xl border border-white/10 overflow-hidden bg-slate-900/60 font-mono text-xs shadow-xl">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-white/5 border-b border-white/10 text-slate-300">
-              <th class="p-4 font-semibold">Command</th>
-              <th class="p-4 font-semibold">Description</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-white/5 text-slate-300">
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton init [--cross]</td>
-              <td class="p-4 text-slate-400">Initialize intra-repo <code class="text-slate-200">.handoffs/</code> hub or central cross-repo hub</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton status [--for &lt;lane&gt;]</td>
-              <td class="p-4 text-slate-400">Inspect pending tickets assigned to your lane or repository</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton status --mermaid</td>
-              <td class="p-4 text-slate-400">Generate live Mermaid topology workflow charts for PRs and docs</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton new &lt;lane&gt; &lt;type&gt; &quot;&lt;title&gt;&quot;</td>
-              <td class="p-4 text-slate-400">Create structured handoff ticket with strict schema frontmatter</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton forward &lt;id&gt; --blind --wait</td>
-              <td class="p-4 text-slate-400">Transfer ticket, sanitize &lt;thinking&gt;, issue Nonce, and enter 0-token sleep</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton receipt &lt;id&gt; --evidence-...</td>
-              <td class="p-4 text-slate-400">Submit verified receipt with Git commit SHA and file paths</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton check</td>
-              <td class="p-4 text-slate-400">Workspace invariant & preflight conformance inspection (must exit 0)</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton install [--lang &lt;en|zh&gt;]</td>
-              <td class="p-4 text-slate-400">Install or refresh baton guard stub into AGENTS.md, CLAUDE.md, etc.</td>
-            </tr>
-            <tr class="hover:bg-white/[0.02]">
-              <td class="p-4 text-brand-400 font-semibold">baton link</td>
-              <td class="p-4 text-slate-400">Wire and self-heal <code class="text-slate-200">baton</code> / <code class="text-slate-200">handoff</code> shims into system PATH</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Feature 1 -->
+        <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
+          <div class="text-2xl mb-3">🛡️</div>
+          <h3 class="font-bold text-white text-base mb-2" data-i18n="c1-h">杜绝假装改完</h3>
+          <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c1-p">
+            以前 AI 经常嘴上说“已经修好”，实际上根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
+          <div class="text-2xl mb-3">💤</div>
+          <h3 class="font-bold text-white text-base mb-2" data-i18n="c2-h">静默待机不耗电</h3>
+          <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c2-p">
+            不用死循环轮询，笔记本不再发烫。探针启动后 AI 彻底静默，等待期间零 CPU 占用、零 Token 浪费。
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
+          <div class="text-2xl mb-3">⚡</div>
+          <h3 class="font-bold text-white text-base mb-2" data-i18n="c3-h">自动唤醒不用人肉搬运</h3>
+          <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c3-p">
+            接收方写完回执的一瞬间，发起方自动被操作系统唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。
+          </p>
+        </div>
+
       </div>
     </section>
+
+    <!-- 极简上手：30秒看懂命令 -->
+    <section id="quickstart" class="py-16 px-6 max-w-4xl mx-auto border-t border-white/5">
+      <div class="text-center mb-10">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2" data-i18n="qs-title">
+          日常使用只有 4 步
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400" data-i18n="qs-desc">简单好记，不需要死记硬背复杂配置</p>
+      </div>
+
+      <div class="space-y-4">
+        
+        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">1</span>
+            <div>
+              <div class="text-sm font-bold text-white" data-i18n="q1-t">创建任务单</div>
+              <div class="text-xs text-slate-400" data-i18n="q1-d">告诉 AI 要实现什么、验收目标是什么</div>
+            </div>
+          </div>
+          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+            baton new impl task "重构登录接口"
+          </code>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">2</span>
+            <div>
+              <div class="text-sm font-bold text-white" data-i18n="q2-t">转递并启动探针</div>
+              <div class="text-xs text-slate-400" data-i18n="q2-d">生成接单提示词，发起方自动静默待机</div>
+            </div>
+          </div>
+          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+            baton forward &lt;ID&gt; --wait
+          </code>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">3</span>
+            <div>
+              <div class="text-sm font-bold text-white" data-i18n="q3-t">接收方提交真实证据</div>
+              <div class="text-xs text-slate-400" data-i18n="q3-d">写完代码后，带 Git commit 和修改路径交卷</div>
+            </div>
+          </div>
+          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+            baton receipt &lt;ID&gt; --evidence-paths "..."
+          </code>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">4</span>
+            <div>
+              <div class="text-sm font-bold text-white" data-i18n="q4-t">自动唤醒并闭环</div>
+              <div class="text-xs text-slate-400" data-i18n="q4-d">发起方自动苏醒，确认改动无误后关闭任务</div>
+            </div>
+          </div>
+          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+            baton accept &lt;ID&gt; -n "验收通过"
+          </code>
+        </div>
+
+      </div>
+    </section>
+
   </main>
 
   <!-- Footer -->
-  <footer class="py-12 border-t border-white/5 bg-[#07090e] text-xs text-slate-500">
-    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-      <div class="flex items-center space-x-3">
-        <div class="w-6 h-6 rounded-lg bg-brand-500 flex items-center justify-center font-bold text-black text-xs">🪄</div>
+  <footer class="py-10 border-t border-white/5 bg-[#080a10] text-xs text-slate-500">
+    <div class="max-w-4xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-2">
         <span class="font-bold text-slate-300">Agent Baton</span>
-        <span>&mdash; MIT Licensed &bull; Open Source</span>
+        <span>— 让 AI 协作真实靠谱</span>
       </div>
-      <div class="flex items-center space-x-6 text-slate-400 font-medium">
-        <a href="https://github.com/ChurzeXo/agent-baton" class="hover:text-white transition-colors">GitHub</a>
-        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/COMMANDS.md" class="hover:text-white transition-colors">Commands</a>
-        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/DESIGN.md" class="hover:text-white transition-colors">Architecture</a>
-        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/docs/zh-CN/README.md" class="hover:text-white transition-colors">中文文档</a>
+      <div class="flex items-center space-x-5 text-slate-400">
+        <a href="https://github.com/ChurzeXo/agent-baton" class="hover:text-white transition-colors">GitHub 源码</a>
+        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/docs/zh-CN/README.md" class="hover:text-white transition-colors">中文说明</a>
+        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/COMMANDS.md" class="hover:text-white transition-colors">完整命令手册</a>
       </div>
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const termData = [
-      `$ <span class="text-brand-400">baton new</span> audit task "Refactor Auth Subsystem"
-<span class="text-emerald-400">✅ Created intra-repo ticket audit-20261105-01-task</span> (lane: audit &bull; workspace: same)
-   Path: .handoffs/handoffs/audit-20261105-01-task.md
-   Next: Fill acceptance criteria &rarr; Run baton forward audit-20261105-01-task --wait`,
-
-      `$ <span class="text-brand-400">baton forward</span> audit-20261105-01-task <span class="text-amber-300">--blind --wait</span>
-<span class="text-emerald-400">🛡️ [Double-Blind]</span> Sanitized reasoning chain (&lt;thinking&gt;) and subjective claims.
-<span class="text-emerald-400">🔐 [Audit Nonce]</span> Challenge token issued: aud_9f81a7b63e2c
-   Auditor must provide: --audit-nonce "aud_9f81a7b63e2c"
-⏳ 0-Token Reactive Sleep: Waiting for receipt via kernel fs.watch...`,
-
-      `$ <span class="text-brand-400">baton receipt</span> audit-20261105-01-task \\
-    --evidence-paths "src/auth.ts,tests/auth.test.ts" \\
-    --evidence-commits "a1b2c3d" \\
-    --audit-nonce "aud_9f81a7b63e2c" \\
-    -n "## Verdict\\nAll invariant test commands executed independently in terminal. PASS."
-<span class="text-emerald-400">🛡️ [Audit Authenticated]</span> Challenge nonce verified & burned.
-<span class="text-emerald-400">✅ Receipt recorded:</span> receipts/audit-20261105-01-task-resp.md`,
-
-      `🎉 <span class="text-emerald-400">[Receipt Detected]</span> Ticket status flipped to received!
-⚡ Initiator session automatically resumed via reactive wake-up!
-$ <span class="text-brand-400">baton check</span>
-Workspace invariants: ✅ PASS (100% compliant)
-$ <span class="text-brand-400">baton accept</span> audit-20261105-01-task -n "Audit passed. Closed."
-<span class="text-emerald-400">🏁 Status closed. Baton pass completed successfully.</span>`
-    ];
-
-    function switchTerm(idx) {
-      const tabs = document.querySelectorAll('.term-tab');
+    let currentStep = 0;
+    function setStep(idx) {
+      currentStep = idx;
+      const tabs = document.querySelectorAll('.step-tab');
       tabs.forEach((t, i) => {
         if (i === idx) {
-          t.className = 'term-tab px-4 py-3 border-b-2 border-brand-400 text-brand-400 font-semibold whitespace-nowrap';
+          t.className = 'step-tab py-3.5 px-2 border-b-2 border-brand-400 text-brand-400 font-bold flex items-center justify-center space-x-1.5';
+          t.querySelector('span:first-child').className = 'w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-[10px]';
         } else {
-          t.className = 'term-tab px-4 py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap';
+          t.className = 'step-tab py-3.5 px-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center space-x-1.5';
+          t.querySelector('span:first-child').className = 'w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center text-[10px]';
         }
       });
-      document.getElementById('term-content').innerHTML = termData[idx];
+      document.querySelectorAll('.step-panel').forEach((p, i) => {
+        if (i === idx) p.classList.remove('hidden');
+        else p.classList.add('hidden');
+      });
     }
-    switchTerm(0);
 
-    // Copy Button with Tooltip
+    function nextStep() {
+      setStep((currentStep + 1) % 3);
+    }
+
+    // Copy Button
     const copyBtn = document.getElementById('copy-btn');
-    const copyText = document.getElementById('copy-text');
+    const copyTxt = document.getElementById('copy-txt');
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText('npm install -g agent-baton');
-      copyText.textContent = 'Copied! ✓';
-      setTimeout(() => copyText.textContent = 'Copy', 2000);
+      copyTxt.textContent = isZh ? '已复制 ✓' : 'Copied! ✓';
+      setTimeout(() => copyTxt.textContent = isZh ? '复制' : 'Copy', 2000);
     });
 
-    // Multi-Language Translations Dictionary
-    const translations = {
+    // Bilingual dictionary (Plain & Simple)
+    let isZh = true;
+    const i18n = {
       zh: {
-        'top-banner': 'v2.16.0 协议发布 — 双盲审计脱敏门禁与一次性挑战令牌',
-        'nav-why': '核心优势',
-        'nav-arch': '架构原理',
-        'nav-workflow': '四步流程',
-        'nav-commands': 'CLI 速查',
-        'nav-design': '架构白皮书',
-        'badge-hero': '实证驱动的 AI 智能体交接协议',
-        'hero-title': '让 AI 智能体在 <br class="hidden sm:inline"/><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-emerald-300 to-teal-200">真凭实据</span> 下安全交接接力棒',
-        'hero-desc': '零依赖的 Git 原生多 Agent 交接协议与 CLI（完美适配 Claude Code, Cursor, Codex, OpenHands 等）。强制执行双盲审计脱敏、一次性挑战令牌防自签与 0-Token 事件驱动待机。',
+        'nav-feature': '交接状态探针',
+        'nav-quick': '30秒上手',
+        'hero-tag': '专为多 AI 协同编程设计',
+        'hero-h1': 'AI 接力写代码，<br class="hidden sm:inline"/>用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话',
+        'hero-p': '别再让 AI “假装完成代码”。Baton 强制要求提供真实 Git 提交和修改文件；独特的<strong>交接状态探针</strong>让你在交接后 0 消耗静默待机，代码一完成瞬间自动唤醒！',
         'btn-copy': '复制',
-        'btn-quickstart': '探索工作流 &rarr;',
-        'arch-title': '零信任多 Agent 架构',
-        'arch-desc': 'Baton 如何物理隔离主观偏见，并通过三权分立的工程门禁约束多智能体生产安全。',
-        'node1-title': '契约规划',
-        'node1-desc': '声明客观验收不变量、I/O 契约及终端复现命令。',
-        'node2-title': '编码实现',
-        'node2-desc': '执行方完成代码，提交真实 Git Commit 并申请转递。',
-        'node3-title': '双盲脱敏中枢',
-        'node3-desc': '物理清洗思维链与借口，签发一次性 Nonce，0-Token 挂起。',
-        'node4-title': '独立双盲审计',
-        'node4-desc': '终端独立实跑测试，校验真实 Commit SHA，核销令牌。',
-        'why-title': '为什么没有 Baton 的多智能体系统无法在生产落地？',
-        'why-desc': '现代编码 Agent 是顶级的写手，却是灾难级的自律者。Baton 用硬核的软件工程防线取代了虚无的客套话。',
-        'p1-bad-title': '虚假回执与幻觉汇报',
-        'p1-bad-desc': 'Agent 嘴上宣称“已重构并测试通过”，实际一行代码都没改。传统框架盲目放行并合入。',
-        'p1-good': '必须提供真实 Git 提交 SHA (git cat-file -e) 与真实变动路径，否则直接砸门阻断。',
-        'p2-bad-title': '审查顺从与谄媚偏见',
-        'p2-bad-desc': '审计 Agent 看了开发者的心路历程与辩解，下意识迎合附和（“解释得很周全，通过！”）。',
-        'p2-good': '双盲脱敏 (--blind) 物理剥离思考过程与自辩借口，审计方仅看客观契约与 Diff。',
-        'p3-bad-title': '同一会话自导自演自签',
-        'p3-bad-desc': '单个 Agent 脚本临时修改角色环境变量，自己写代码自己当裁判盖章闭环。',
-        'p3-good': '转递时动态签发一次性随机令牌 (Nonce)，回执核销方可落盘，根除同会话伪造。',
-        'p4-bad-title': '轮询死循环与发热耗 Token',
-        'p4-bad-desc': '等待下游 Agent 时采用轮询死循环，电脑严重发热且无意义消耗上万 Token。',
-        'p4-good': '内核级 fs.watch 事件监听挂起。等待期间 0 CPU、0 Token 开销，状态流转毫秒级唤醒。',
-        'wf-title': '确定性的四步工作流',
-        'wf-desc': '每一次接力严格经历 4 态确定性状态机：Draft &rarr; Forwarded &rarr; Received &rarr; Closed。',
-        'wf1-h': '创建交接单',
-        'wf1-p': '发起方在 Markdown 单中声明验收指标与预期 Git 凭证。',
-        'wf2-h': '双盲转递',
-        'wf2-p': '物理脱敏思维链，签发挑战 Nonce，0-Token 挂起待机。',
-        'wf3-h': '独立审计',
-        'wf3-p': '审计方在终端独立跑测试，提交真实凭证与 Nonce。',
-        'wf4-h': '自动唤醒验收',
-        'wf4-p': '发起方毫秒级自动唤醒，复核合规报告并完成闭环。',
-        'cmd-title': 'CLI 核心命令速查',
-        'cmd-desc': '好记、流畅、零依赖。统一支持 baton 与 handoff 双命令。'
+        'probe-title': '交接状态探针：怎么让 AI 自动闭环？',
+        'probe-desc': '无需你在多个 AI 窗口间人肉复制粘贴，更不跑死循环发烫。',
+        'probe-live-label': '探针模式: 0-Token 事件驱动监听',
+        'step1-tab': '发起交接 & 探针待机',
+        'step2-tab': '接收方提交真实证据',
+        'step3-tab': '探针瞬间自动唤醒！',
+        's1-title': '交代任务并挂起探针，AI 进入“静音休眠”',
+        's1-desc': '发起方 AI 交代好修改目标后，执行转递命令。探针立即在后台挂起，等待期间不耗电脑性能、不耗 Token。',
+        's2-title': '拒绝“口头改完”！接收方必须携带真实 Commit 与改动文件',
+        's2-desc': '接收方 AI 施工完毕后提交回执。系统底层会物理检查 Git 提交历史和真实文件，嘴上说改了但没动代码的直接打回！',
+        's3-title': '回执一落盘，探针立刻 Exit 0，发起方 AI 自动醒来收尾！',
+        's3-desc': '底层基于操作系统的文件事件通知（fs.watch）。当真实回执保存的瞬间，休眠的发起方立刻被唤醒，自动完成闭环验收。',
+        'probe-bottom-tip': '核心价值：<strong>不信嘴说、不耗待机 Token、自动唤醒闭环</strong>。',
+        'probe-next': '下一步演示',
+        'diff-title': '用 Baton 写代码，体验有什么不同？',
+        'diff-desc': '普通开发者用 AI 协作时最容易踩的坑，一次性解决',
+        'c1-h': '杜绝假装改完',
+        'c1-p': '以前 AI 经常嘴上说“已经修好”，实际上根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。',
+        'c2-h': '静默待机不耗电',
+        'c2-p': '不用死循环轮询，笔记本不再发烫。探针启动后 AI 彻底静默，等待期间零 CPU 占用、零 Token 浪费。',
+        'c3-h': '自动唤醒不用人肉搬运',
+        'c3-p': '接收方写完回执的一瞬间，发起方自动被操作系统唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。',
+        'qs-title': '日常使用只有 4 步',
+        'qs-desc': '简单好记，不需要死记硬背复杂配置',
+        'q1-t': '创建任务单',
+        'q1-d': '告诉 AI 要实现什么、验收目标是什么',
+        'q2-t': '转递并启动探针',
+        'q2-d': '生成接单提示词，发起方自动静默待机',
+        'q3-t': '接收方提交真实证据',
+        'q3-d': '写完代码后，带 Git commit 和修改路径交卷',
+        'q4-t': '自动唤醒并闭环',
+        'q4-d': '发起方自动苏醒，确认改动无误后关闭任务'
       },
       en: {
-        'top-banner': 'v2.16.0 Protocol Released — Double-Blind Audit Gates & Ephemeral Challenge Nonces',
-        'nav-why': 'Why Baton',
-        'nav-arch': 'Architecture',
-        'nav-workflow': 'Workflow',
-        'nav-commands': 'CLI Manual',
-        'nav-design': 'Whitepaper',
-        'badge-hero': 'Evidence-First, Zero-Trust Handoff Protocol',
-        'hero-title': 'Pass the Baton Between AI Agents with <br class="hidden sm:inline"/><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-emerald-300 to-teal-200">Cryptographic Proofs</span>',
-        'hero-desc': 'A zero-dependency, Git-native handoff engine for autonomous coding agents (Claude Code, Cursor, Codex, OpenHands). Enforcing double-blind audits, anti-spoofing challenge nonces, and 0-token reactive sleep.',
+        'nav-feature': 'Status Probe',
+        'nav-quick': 'Quickstart',
+        'hero-tag': 'Engineered for Multi-AI Pair Programming',
+        'hero-h1': 'Pass the Baton Between AI Agents with <br class="hidden sm:inline"/><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">Real Evidence</span>',
+        'hero-p': 'Stop letting AI hallucinate task completions. Baton enforces real Git commits & diffs. Our unique <strong>Status Probe</strong> puts your AI into 0-token silent sleep and wakes it up the exact millisecond code arrives.',
         'btn-copy': 'Copy',
-        'btn-quickstart': 'Explore Workflow &rarr;',
-        'arch-title': 'Zero-Trust Architecture',
-        'arch-desc': 'How Baton isolates cognitive biases and enforces physical evidence through strict separation of duties.',
-        'node1-title': 'Contract Planning',
-        'node1-desc': 'Specifies objective invariants, input/output schemas, and test acceptance commands in structured Markdown.',
-        'node2-title': 'Code Implementation',
-        'node2-desc': 'Developer Agent finishes code changes, commits to local Git, and initiates transfer for independent review.',
-        'node3-title': 'Double-Blind Sanitizer',
-        'node3-desc': 'Physically strips LLM <thinking> and reasoning excuses. Generates ephemeral cryptographic Nonce.',
-        'node4-title': 'Independent Audit',
-        'node4-desc': 'Terminal commands executed independently. Evidence SHA confirmed on disk via git cat-file. Nonce burned.',
-        'why-title': 'Why Multi-Agent Systems Fail Without Baton',
-        'why-desc': 'Autonomous coding agents are brilliant at typing code, but catastrophic at self-governance. Baton replaces naive conversational agreements with hard invariants.',
-        'p1-bad-title': 'Hallucinated Completions',
-        'p1-bad-desc': 'Agent reports: &quot;Refactored authentication, updated 14 modules, all 42 tests passing.&quot; In reality, zero files were modified on disk. Naive orchestrators accept the claim and merge.',
-        'p1-good': 'Requires verifiable Git commit SHA (git cat-file -e) & non-empty file modifications.',
-        'p2-bad-title': 'Sycophancy & Priming Bias',
-        'p2-bad-desc': 'Reviewer Agent reads the author\'s internal reasoning and rationalizations (&quot;I skipped the corner cases because of XYZ&quot;), leading to polite rubber-stamping.',
-        'p2-good': 'Double-Blind Sanitizer (--blind) strips CoT & excuses. Reviewer sees only pure requirements & code diff.',
-        'p3-bad-title': 'Self-Signing Loopholes',
-        'p3-bad-desc': 'A single session toggles its environment variable or agent prompt, reviews its own output, and signs its own completion ticket without independent oversight.',
-        'p3-good': 'Ephemeral challenge nonces generated during forward are wiped upon verification. Cross-lane self-signing is cryptographically blocked.',
-        'p4-bad-title': 'Token Drain & Polling Burn',
-        'p4-bad-desc': 'Waiting for peer agent tasks using fixed polling intervals consumes thousands of LLM tokens, wastes battery life, and hammers developer machines.',
-        'p4-good': 'Kernel-level fs.watch event sleep. Zero tokens consumed during waiting; auto wakes up upon ticket status flip.',
-        'wf-title': 'The Deterministic 4-Step Lifecycle',
-        'wf-desc': 'Every task advances through a strict, finite state machine: Draft &rarr; Forwarded &rarr; Received &rarr; Closed.',
-        'wf1-h': 'Create Ticket',
-        'wf1-p': 'Author lane documents invariants, boundary tests, and expected Git evidence.',
-        'wf2-h': 'Double-Blind Transfer',
-        'wf2-p': 'Sanitizes subjective CoT, issues challenge Nonce, and sleeps with zero Token burn.',
-        'wf3-h': 'Independent Review',
-        'wf3-p': 'Auditor executes shell commands in terminal and signs receipt with valid Nonce.',
-        'wf4-h': 'Reactive Acceptance',
-        'wf4-p': 'Author wakes up instantly upon file event, runs preflight verification, and closes.',
-        'cmd-title': 'Command Quick Reference',
-        'cmd-desc': 'Unified CLI engine. All commands work identically via baton or handoff.'
+        'probe-title': 'Status Probe: How Agents Auto-Loop Without You',
+        'probe-desc': 'No more manual copy-pasting between chat tabs. No CPU-burning polling loops.',
+        'probe-live-label': 'Probe Mode: 0-Token Event-Driven Listener',
+        'step1-tab': 'Forward & Sleep',
+        'step2-tab': 'Real Evidence Check',
+        'step3-tab': 'Instant Auto Wakeup!',
+        's1-title': 'Delegate Task & Activate Probe (Silent Sleep)',
+        's1-desc': 'Author AI creates ticket and forwards it. The probe puts the session to sleep immediately—0 CPU, 0 Token consumed.',
+        's2-title': 'No Fake Claims! Real Commits & Files Required',
+        's2-desc': 'Worker AI finishes coding. Baton verifies real commits on disk with git cat-file. Empty promises are rejected instantly.',
+        's3-title': 'Receipt Landed! Probe Exits 0 & Wakes Up Author!',
+        's3-desc': 'OS-level kernel file watcher (fs.watch) detects the receipt. Sleeping author session resumes instantly to verify and close.',
+        'probe-bottom-tip': 'Core Value: <strong>Real Proofs, Zero Token Waste, Automatic Wakeup</strong>.',
+        'probe-next': 'Next Step',
+        'diff-title': 'Why Baton Changes Your AI Coding Experience',
+        'diff-desc': 'Fixing the 3 biggest multi-agent headaches for everyday developers',
+        'c1-h': 'Zero Fake Completions',
+        'c1-p': 'AIs love to claim "Done and tested!" when nothing changed. Baton checks real Git commits—no code means no pass.',
+        'c2-h': 'Zero Token Burn & Heat',
+        'c2-p': 'No polling loops while waiting for other agents. Laptops stay cool, zero battery drain, zero wasted tokens.',
+        'c3-h': 'Zero Manual Copy-Pasting',
+        'c3-p': 'The moment the other AI finishes, your original session wakes up automatically to review and merge.',
+        'qs-title': '4 Simple Steps to Use',
+        'qs-desc': 'Intuitive and easy to remember without complex setup',
+        'q1-t': 'Create Ticket',
+        'q1-d': 'Define what to build and objective acceptance criteria',
+        'q2-t': 'Forward & Listen',
+        'q2-d': 'Generates pass prompt and puts author into silent wait',
+        'q3-t': 'Submit Evidence',
+        'q3-d': 'Worker completes code with real Git commit & paths',
+        'q4-t': 'Auto Wakeup & Close',
+        'q4-d': 'Author wakes up automatically, verifies diff, and closes'
       }
     };
 
-    let currentLang = 'en';
-    const langBtn = document.getElementById('lang-toggle');
-    const langLabel = document.getElementById('lang-label');
-    
+    const langBtn = document.getElementById('lang-btn');
+    const langText = document.getElementById('lang-text');
     langBtn.addEventListener('click', () => {
-      currentLang = currentLang === 'en' ? 'zh' : 'en';
-      langLabel.textContent = currentLang === 'en' ? '中文' : 'English';
-      applyLang(currentLang);
-    });
-
-    function applyLang(lang) {
+      isZh = !isZh;
+      langText.textContent = isZh ? 'English' : '中文';
+      const dict = isZh ? i18n.zh : i18n.en;
       document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (translations[lang] && translations[lang][key]) {
-          el.innerHTML = translations[lang][key];
-        }
+        const k = el.getAttribute('data-i18n');
+        if (dict[k]) el.innerHTML = dict[k];
       });
-    }
+    });
   </script>
 </body>
 </html>
