@@ -42,24 +42,45 @@
 
   <style>
     body {
-      background-color: #080a10;
+      background-color: #07090e;
       color: #f1f5f9;
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .bg-grid {
-      background-size: 40px 40px;
+      background-size: 32px 32px;
       background-image: 
         linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
     .hero-glow {
-      background: radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.22), transparent 70%);
+      background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.18), transparent 75%);
     }
-    .card-glow {
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 30px -5px rgba(16, 185, 129, 0.12);
+    .flow-card {
+      background: rgba(13, 17, 26, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .pulse-glow {
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
+    .flow-card.active-node {
+      border-color: rgba(52, 211, 153, 0.8);
+      box-shadow: 0 0 25px -3px rgba(16, 185, 129, 0.4), 0 15px 35px -10px rgba(0, 0, 0, 0.9);
+      transform: translateY(-2px);
+    }
+    .radar-pulse {
+      animation: radarRipple 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+    @keyframes radarRipple {
+      0% { transform: scale(0.9); opacity: 0.9; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    @keyframes flowBeam {
+      0% { stroke-dashoffset: 160; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .animated-beam {
+      stroke-dasharray: 12, 140;
+      animation: flowBeam 2.2s linear infinite;
     }
   </style>
 </head>
@@ -69,37 +90,37 @@
   <div class="fixed inset-0 hero-glow pointer-events-none -z-10"></div>
 
   <!-- Header -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#080a10]/80 border-b border-white/5">
-    <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#07090e]/85 border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
       
-      <!-- Logo -->
-      <a href="#" class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-300 flex items-center justify-center text-black font-black text-lg shadow-md shadow-brand-500/20">
+      <!-- Brand -->
+      <a href="#" class="flex items-center space-x-2.5 group">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-300 flex items-center justify-center text-black font-black text-base shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
           🪄
         </div>
-        <div class="flex items-center space-x-2">
-          <span class="font-bold text-lg tracking-tight text-white">Agent Baton</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 font-mono border border-brand-500/20">v1.0</span>
+        <div class="flex items-center space-x-1.5">
+          <span class="font-bold text-base tracking-tight text-white">Agent Baton</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 font-mono border border-brand-500/20">v1.0</span>
         </div>
       </a>
 
-      <!-- Quick Nav & Language -->
-      <div class="flex items-center space-x-4">
-        <a href="#probe-section" class="hidden sm:inline-block text-xs font-semibold text-slate-300 hover:text-white transition-colors" data-i18n="nav-feature">
-          交接状态探针
-        </a>
-        <a href="#quickstart" class="hidden sm:inline-block text-xs font-semibold text-slate-300 hover:text-white transition-colors" data-i18n="nav-quick">
-          30秒上手
-        </a>
-        
+      <!-- Quick Actions -->
+      <div class="flex items-center space-x-3">
+        <!-- Install Command Pill -->
+        <button id="copy-btn" class="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-300 hover:text-white transition-all" title="点击复制安装命令">
+          <span class="text-brand-400 font-bold">$</span>
+          <span>npm i -g agent-baton</span>
+          <span id="copy-icon" class="text-slate-400 pl-1 text-[11px]">📋</span>
+        </button>
+
         <!-- Language Switcher -->
-        <button id="lang-btn" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-white/10 hover:border-brand-500/40 bg-white/5 hover:bg-white/10 text-slate-200 transition-all flex items-center space-x-1.5">
+        <button id="lang-btn" class="px-2.5 py-1 text-xs font-medium rounded-lg border border-white/10 hover:border-brand-500/40 bg-white/5 hover:bg-white/10 text-slate-200 transition-all flex items-center space-x-1">
           <span>🌐</span>
           <span id="lang-text">English</span>
         </button>
 
-        <!-- GitHub -->
-        <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors" title="GitHub">
+        <!-- GitHub Link -->
+        <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
         </a>
       </div>
@@ -108,209 +129,184 @@
 
   <main class="flex-grow">
     
-    <!-- Hero Section: 通俗简洁、直击痛点 -->
-    <section class="pt-16 pb-12 px-6 text-center max-w-4xl mx-auto">
+    <!-- ★ 首屏超级焦点：紧凑标题 + 首屏全景动态流程图 ★ -->
+    <section class="pt-8 pb-12 px-4 sm:px-6 max-w-6xl mx-auto">
       
-      <!-- Feature Pill -->
-      <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-400 text-xs font-semibold mb-6">
-        <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-        <span data-i18n="hero-tag">专为多 AI 协同编程设计</span>
-      </div>
-
-      <!-- Main Headline -->
-      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15] mb-6" data-i18n="hero-h1">
-        AI 接力写代码，<br class="hidden sm:inline"/>
-        用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话
-      </h1>
-
-      <!-- Plain Subhead -->
-      <p class="text-base sm:text-lg text-slate-300 font-normal max-w-2xl mx-auto mb-8 leading-relaxed" data-i18n="hero-p">
-        别再让 AI “假装完成代码”。Baton 强制要求提供真实 Git 提交和修改文件；独特的<strong>交接状态探针</strong>让你在交接后 0 消耗静默待机，代码一完成瞬间自动唤醒！
-      </p>
-
-      <!-- Quick Command Box -->
-      <div class="inline-flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-white/10 shadow-xl max-w-md w-full mb-6">
-        <div class="flex items-center space-x-3 pl-3 font-mono text-sm text-slate-200">
-          <span class="text-brand-400 font-bold select-none">$</span>
-          <span>npm install -g agent-baton</span>
+      <!-- Top Compact Headline -->
+      <div class="text-center max-w-3xl mx-auto mb-8">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-400 text-xs font-semibold mb-3">
+          <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+          <span data-i18n="tag-hero">实证驱动 · 零耗能状态探针</span>
         </div>
-        <button id="copy-btn" class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-brand-500 hover:text-black text-xs font-semibold text-white transition-all">
-          <span id="copy-txt" data-i18n="btn-copy">复制</span>
-        </button>
-      </div>
 
-      <!-- Secondary Links -->
-      <div class="flex items-center justify-center space-x-4 text-xs text-slate-400 font-medium">
-        <span>✅ 纯 Node 原生（零第三方依赖）</span>
-        <span>•</span>
-        <span>✅ 兼容 Claude Code / Cursor / Codex</span>
-      </div>
-    </section>
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight mb-3" data-i18n="h1-hero">
+          AI 接力写代码，用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话
+        </h1>
 
-    <!-- ★ 最醒目位置：证据交接流程与【交接状态探针】核心特色 ★ -->
-    <section id="probe-section" class="py-12 px-6 max-w-4xl mx-auto">
-      
-      <!-- Section Title -->
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center space-x-1.5 text-brand-400 text-xs font-mono font-bold tracking-wider uppercase mb-2">
-          <span>⚡ CORE FEATURE</span>
-        </div>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2" data-i18n="probe-title">
-          交接状态探针：怎么让 AI 自动闭环？
-        </h2>
-        <p class="text-sm text-slate-400 max-w-lg mx-auto" data-i18n="probe-desc">
-          无需你在多个 AI 窗口间人肉复制粘贴，更不跑死循环发烫。
+        <p class="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto" data-i18n="desc-hero">
+          必须携带真实 Git 提交与改动文件，空口自称直接拦截。<strong>交接状态探针</strong>静音休眠待机，回执到达毫秒自动唤醒！
         </p>
       </div>
 
-      <!-- Interactive Probe Visualizer Container -->
-      <div class="rounded-2xl border border-white/10 bg-[#0d1017] card-glow overflow-hidden">
+      <!-- 首屏核心：全景动态接力流程图 (Dynamic Pipeline Canvas) -->
+      <div class="rounded-2xl border border-white/10 bg-[#0a0d15] p-5 sm:p-7 relative shadow-2xl overflow-hidden">
         
-        <!-- Probe Top Status Bar -->
-        <div class="bg-slate-900/90 border-b border-white/5 px-5 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <!-- Canvas Status Header -->
+        <div class="flex flex-wrap items-center justify-between pb-5 mb-6 border-b border-white/5 gap-3">
           <div class="flex items-center space-x-2.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-brand-400 animate-ping"></span>
-            <span class="font-mono font-semibold text-white" data-i18n="probe-live-label">探针模式: 0-Token 事件驱动监听</span>
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-brand-500"></span>
+            </span>
+            <span class="text-xs font-bold text-white tracking-wide uppercase font-mono" data-i18n="pipeline-title">
+              实时交接流程图 · 动态闭环演示
+            </span>
           </div>
-          <div class="flex items-center space-x-2 text-slate-400 font-mono text-[11px]">
-            <span class="px-2 py-0.5 rounded bg-black/40 border border-white/5">CPU: 0.0%</span>
-            <span class="px-2 py-0.5 rounded bg-black/40 border border-white/5">Token: 0</span>
+
+          <!-- Phase Navigation Indicators -->
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="text-slate-400 text-[11px] font-mono hidden sm:inline" data-i18n="stage-indicator">阶段:</span>
+            <button class="stage-btn px-2.5 py-1 rounded bg-brand-500 text-black font-bold font-mono text-[11px] transition-all" onclick="jumpStage(0)">1. 发起</button>
+            <button class="stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all" onclick="jumpStage(1)">2. 探针休眠</button>
+            <button class="stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all" onclick="jumpStage(2)">3. 真实证据</button>
+            <button class="stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all" onclick="jumpStage(3)">4. 自动唤醒</button>
           </div>
         </div>
 
-        <!-- 3-Step Clickable Navigation -->
-        <div class="grid grid-cols-3 border-b border-white/5 text-xs text-center font-medium bg-slate-950/50">
-          <button class="step-tab py-3.5 px-2 border-b-2 border-brand-400 text-brand-400 font-bold flex items-center justify-center space-x-1.5" onclick="setStep(0)">
-            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-[10px]">1</span>
-            <span data-i18n="step1-tab">发起交接 & 探针待机</span>
-          </button>
-          <button class="step-tab py-3.5 px-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center space-x-1.5" onclick="setStep(1)">
-            <span class="w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center text-[10px]">2</span>
-            <span data-i18n="step2-tab">接收方提交真实证据</span>
-          </button>
-          <button class="step-tab py-3.5 px-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center space-x-1.5" onclick="setStep(2)">
-            <span class="w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center text-[10px]">3</span>
-            <span data-i18n="step3-tab">探针瞬间自动唤醒！</span>
-          </button>
-        </div>
-
-        <!-- Step Interactive Body -->
-        <div class="p-6 sm:p-8">
+        <!-- Flow Nodes Grid (首屏横向/网格式节点排布) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
           
-          <!-- Step 1 View -->
-          <div id="step-0" class="step-panel space-y-4">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="text-xs font-mono font-bold text-brand-400 uppercase">Step 01 / 发起交接</span>
-                <h3 class="text-lg font-bold text-white mt-1" data-i18n="s1-title">交代任务并挂起探针，AI 进入“静音休眠”</h3>
-                <p class="text-xs text-slate-400 mt-1" data-i18n="s1-desc">发起方 AI 交代好修改目标后，执行转递命令。探针立即在后台挂起，等待期间不耗电脑性能、不耗 Token。</p>
+          <!-- Node 1: 发起方 -->
+          <div id="node-0" class="flow-card active-node rounded-xl p-4 flex flex-col justify-between cursor-pointer" onclick="jumpStage(0)">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono font-bold text-brand-400">NODE 01</span>
+                <span class="text-base select-none">🤖</span>
               </div>
-              <span class="text-3xl select-none">💤</span>
+              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n1-title">发起方 Agent</h3>
+              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n1-desc">
+                创建任务单，列明修改要求与测试标准。
+              </p>
             </div>
-
-            <!-- Command & Terminal Box -->
-            <div class="rounded-xl bg-black/60 border border-white/5 p-4 font-mono text-xs text-slate-300 space-y-2">
-              <div class="text-slate-500"># 发起交接并进入后台监听探针（一条命令搞定）</div>
-              <div class="text-brand-300 font-semibold">$ baton forward audit-20261105-01-task --wait</div>
-              <div class="text-slate-400">
-                &rarr; 已生成接单提示词，供直接转递接收方<br>
-                &rarr; <span class="text-amber-300 font-medium">探针已就绪：正在后台静音待机...（0 Token 开销）</span>
-              </div>
+            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-slate-400 flex items-center justify-between">
+              <code>baton new impl ...</code>
+              <span class="text-brand-400 text-[10px]">就绪</span>
             </div>
           </div>
 
-          <!-- Step 2 View -->
-          <div id="step-1" class="step-panel hidden space-y-4">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="text-xs font-mono font-bold text-amber-400 uppercase">Step 02 / 真实改动门禁</span>
-                <h3 class="text-lg font-bold text-white mt-1" data-i18n="s2-title">拒绝“口头改完”！接收方必须携带真实 Commit 与改动文件</h3>
-                <p class="text-xs text-slate-400 mt-1" data-i18n="s2-desc">接收方 AI 施工完毕后提交回执。系统底层会物理检查 Git 提交历史和真实文件，嘴上说改了但没动代码的直接打回！</p>
-              </div>
-              <span class="text-3xl select-none">🔍</span>
-            </div>
+          <!-- Node 2: 状态探针 (特色中心高亮) -->
+          <div id="node-1" class="flow-card rounded-xl p-4 flex flex-col justify-between relative overflow-hidden cursor-pointer" onclick="jumpStage(1)">
+            <!-- Pulse Effect inside Probe -->
+            <div id="probe-pulse" class="hidden absolute -right-3 -top-3 w-16 h-16 rounded-full bg-brand-400/20 radar-pulse pointer-events-none"></div>
 
-            <div class="rounded-xl bg-black/60 border border-white/5 p-4 font-mono text-xs text-slate-300 space-y-2">
-              <div class="text-slate-500"># 接收方提交回执（必须带真实提交哈希与修改路径）</div>
-              <div class="text-amber-300 font-semibold">$ baton receipt audit-20261105-01-task \</div>
-              <div class="text-slate-300 pl-4">--evidence-paths "src/auth.ts,tests/auth.test.ts" \</div>
-              <div class="text-slate-300 pl-4">--evidence-commits "a1b2c3d" \</div>
-              <div class="text-slate-300 pl-4">-n "## 结论\n已在终端独立运行测试，全部通过。"</div>
-              <div class="text-emerald-400 pt-1">✅ 检查通过：Commit a1b2c3d 真实有效，回执已登记！</div>
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono font-bold text-emerald-400 flex items-center space-x-1">
+                  <span>⚡ 核心探针</span>
+                </span>
+                <span class="text-base select-none">💤</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n2-title">交接状态探针</h3>
+              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n2-desc">
+                挂起后台静音监听，0 CPU、0 Token 待机。
+              </p>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-emerald-300 flex items-center justify-between">
+              <code>baton forward --wait</code>
+              <span id="probe-badge" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">待命</span>
             </div>
           </div>
 
-          <!-- Step 3 View -->
-          <div id="step-2" class="step-panel hidden space-y-4">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="text-xs font-mono font-bold text-emerald-400 uppercase">Step 03 / 探针毫秒自动唤醒</span>
-                <h3 class="text-lg font-bold text-white mt-1" data-i18n="s3-title">回执一落盘，探针立刻 Exit 0，发起方 AI 自动醒来收尾！</h3>
-                <p class="text-xs text-slate-400 mt-1" data-i18n="s3-desc">底层基于操作系统的文件事件通知（fs.watch）。当真实回执保存的瞬间，休眠的发起方立刻被唤醒，自动完成闭环验收。</p>
+          <!-- Node 3: 执行方 & 真实证据 -->
+          <div id="node-2" class="flow-card rounded-xl p-4 flex flex-col justify-between cursor-pointer" onclick="jumpStage(2)">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono font-bold text-amber-400">NODE 03</span>
+                <span class="text-base select-none">🛠️</span>
               </div>
-              <span class="text-3xl select-none">⚡</span>
+              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n3-title">接收方 & 真实证据</h3>
+              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n3-desc">
+                施工改代码，必须附带 Git Commit 与变动文件。
+              </p>
             </div>
+            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-slate-400 flex items-center justify-between">
+              <code>baton receipt --evidence</code>
+              <span class="text-amber-300 text-[10px]">核验</span>
+            </div>
+          </div>
 
-            <div class="rounded-xl bg-black/60 border border-emerald-500/20 p-4 font-mono text-xs text-slate-300 space-y-2">
-              <div class="text-emerald-400 font-semibold">🎉 [探针感知] 检测到 audit-20261105-01-task 真实回执已落地！</div>
-              <div class="text-slate-300">⚡ 发起方 AI 会话被自动唤醒（退出码 0），开始验收：</div>
-              <div class="text-brand-300 pt-1">$ baton check && baton accept audit-20261105-01-task -n "已复核代码改动，验收合入！"</div>
-              <div class="text-emerald-400 font-bold">🏁 任务顺利闭环！全程无需人工传话。</div>
+          <!-- Node 4: 探针唤醒与闭环 -->
+          <div id="node-3" class="flow-card rounded-xl p-4 flex flex-col justify-between cursor-pointer" onclick="jumpStage(3)">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono font-bold text-cyan-400">NODE 04</span>
+                <span class="text-base select-none">🎉</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n4-title">探针唤醒 · 自动闭环</h3>
+              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n4-desc">
+                回执到达秒级唤醒原会话，复核无误合入完成。
+              </p>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-slate-400 flex items-center justify-between">
+              <code>baton accept &lt;ID&gt;</code>
+              <span class="text-cyan-300 text-[10px]">闭环</span>
             </div>
           </div>
 
         </div>
 
-        <!-- Flow Visual Bar -->
-        <div class="bg-slate-900/70 border-t border-white/5 px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
-          <div class="flex items-center space-x-2">
-            <span class="text-brand-400">💡</span>
-            <span data-i18n="probe-bottom-tip">核心价值：<strong>不信嘴说、不耗待机 Token、自动唤醒闭环</strong>。</span>
+        <!-- Dynamic Live Interactive Log Screen (下方联动展示动态终端日志) -->
+        <div class="mt-5 rounded-xl bg-black/70 border border-white/5 p-4 font-mono text-xs text-slate-300 min-h-[92px] flex items-center justify-between gap-4">
+          <div class="flex items-start space-x-3 overflow-x-auto">
+            <span class="text-brand-400 font-bold select-none text-sm leading-none pt-0.5">&gt;</span>
+            <div id="flow-log" class="leading-relaxed">
+              <!-- Log injected by JS -->
+            </div>
           </div>
-          <button onclick="nextStep()" class="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center space-x-1">
-            <span data-i18n="probe-next">下一步演示</span>
-            <span>&rarr;</span>
-          </button>
+          <div class="hidden sm:flex flex-col items-end text-[10px] text-slate-500 font-mono shrink-0">
+            <span>EVENT_BUS: fs.watch</span>
+            <span id="probe-metric" class="text-brand-400 font-bold">READY</span>
+          </div>
         </div>
 
       </div>
     </section>
 
     <!-- 普通人也能懂的三大改变 -->
-    <section class="py-16 px-6 max-w-4xl mx-auto border-t border-white/5">
-      <div class="text-center mb-12">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2" data-i18n="diff-title">
-          用 Baton 写代码，体验有什么不同？
+    <section class="py-12 px-6 max-w-5xl mx-auto border-t border-white/5">
+      <div class="text-center mb-10">
+        <h2 class="text-xl sm:text-2xl font-extrabold text-white mb-2" data-i18n="diff-title">
+          为什么不用传统对话，而要用 Baton 接力？
         </h2>
-        <p class="text-xs sm:text-sm text-slate-400" data-i18n="diff-desc">普通开发者用 AI 协作时最容易踩的坑，一次性解决</p>
+        <p class="text-xs sm:text-sm text-slate-400" data-i18n="diff-desc">解决多 AI 编程协作中最常踩的 3 大坑</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         <!-- Feature 1 -->
-        <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
-          <div class="text-2xl mb-3">🛡️</div>
-          <h3 class="font-bold text-white text-base mb-2" data-i18n="c1-h">杜绝假装改完</h3>
+        <div class="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
+          <div class="text-2xl mb-2.5">🛡️</div>
+          <h3 class="font-bold text-white text-sm mb-1.5" data-i18n="c1-h">杜绝假装改完</h3>
           <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c1-p">
-            以前 AI 经常嘴上说“已经修好”，实际上根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。
+            以前 AI 经常说“已经改好”，实际根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。
           </p>
         </div>
 
         <!-- Feature 2 -->
-        <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
-          <div class="text-2xl mb-3">💤</div>
-          <h3 class="font-bold text-white text-base mb-2" data-i18n="c2-h">静默待机不耗电</h3>
+        <div class="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
+          <div class="text-2xl mb-2.5">💤</div>
+          <h3 class="font-bold text-white text-sm mb-1.5" data-i18n="c2-h">静默待机不耗电</h3>
           <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c2-p">
             不用死循环轮询，笔记本不再发烫。探针启动后 AI 彻底静默，等待期间零 CPU 占用、零 Token 浪费。
           </p>
         </div>
 
         <!-- Feature 3 -->
-        <div class="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
-          <div class="text-2xl mb-3">⚡</div>
-          <h3 class="font-bold text-white text-base mb-2" data-i18n="c3-h">自动唤醒不用人肉搬运</h3>
+        <div class="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
+          <div class="text-2xl mb-2.5">⚡</div>
+          <h3 class="font-bold text-white text-sm mb-1.5" data-i18n="c3-h">自动唤醒不用人肉搬运</h3>
           <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c3-p">
-            接收方写完回执的一瞬间，发起方自动被操作系统唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。
+            接收方写完回执的一瞬间，发起方自动被唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。
           </p>
         </div>
 
@@ -318,64 +314,64 @@
     </section>
 
     <!-- 极简上手：30秒看懂命令 -->
-    <section id="quickstart" class="py-16 px-6 max-w-4xl mx-auto border-t border-white/5">
-      <div class="text-center mb-10">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2" data-i18n="qs-title">
+    <section class="py-12 px-6 max-w-4xl mx-auto border-t border-white/5">
+      <div class="text-center mb-8">
+        <h2 class="text-xl sm:text-2xl font-extrabold text-white mb-2" data-i18n="qs-title">
           日常使用只有 4 步
         </h2>
-        <p class="text-xs sm:text-sm text-slate-400" data-i18n="qs-desc">简单好记，不需要死记硬背复杂配置</p>
+        <p class="text-xs text-slate-400" data-i18n="qs-desc">简单好记，不需要死记硬背复杂配置</p>
       </div>
 
-      <div class="space-y-4">
+      <div class="space-y-3 font-mono text-xs">
         
-        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div class="flex items-center space-x-3">
-            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">1</span>
+            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">1</span>
             <div>
-              <div class="text-sm font-bold text-white" data-i18n="q1-t">创建任务单</div>
-              <div class="text-xs text-slate-400" data-i18n="q1-d">告诉 AI 要实现什么、验收目标是什么</div>
+              <span class="font-bold text-white font-sans text-xs" data-i18n="q1-t">创建任务单</span>
+              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q1-d">明确任务目标与验收判据</span>
             </div>
           </div>
-          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
-            baton new impl task "重构登录接口"
+          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
+            baton new impl task "重构认证模块"
           </code>
         </div>
 
-        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div class="flex items-center space-x-3">
-            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">2</span>
+            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">2</span>
             <div>
-              <div class="text-sm font-bold text-white" data-i18n="q2-t">转递并启动探针</div>
-              <div class="text-xs text-slate-400" data-i18n="q2-d">生成接单提示词，发起方自动静默待机</div>
+              <span class="font-bold text-white font-sans text-xs" data-i18n="q2-t">转递并启动探针</span>
+              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q2-d">生成提示词，发起方自动静音待机</span>
             </div>
           </div>
-          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
             baton forward &lt;ID&gt; --wait
           </code>
         </div>
 
-        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div class="flex items-center space-x-3">
-            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">3</span>
+            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">3</span>
             <div>
-              <div class="text-sm font-bold text-white" data-i18n="q3-t">接收方提交真实证据</div>
-              <div class="text-xs text-slate-400" data-i18n="q3-d">写完代码后，带 Git commit 和修改路径交卷</div>
+              <span class="font-bold text-white font-sans text-xs" data-i18n="q3-t">接收方提交真实证据</span>
+              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q3-d">必须附带 Git Commit 与变动文件</span>
             </div>
           </div>
-          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
             baton receipt &lt;ID&gt; --evidence-paths "..."
           </code>
         </div>
 
-        <div class="p-4 sm:p-5 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div class="flex items-center space-x-3">
-            <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-mono text-xs font-bold flex items-center justify-center">4</span>
+            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">4</span>
             <div>
-              <div class="text-sm font-bold text-white" data-i18n="q4-t">自动唤醒并闭环</div>
-              <div class="text-xs text-slate-400" data-i18n="q4-d">发起方自动苏醒，确认改动无误后关闭任务</div>
+              <span class="font-bold text-white font-sans text-xs" data-i18n="q4-t">自动唤醒闭环</span>
+              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q4-d">发起方自动苏醒，确认改动合入</span>
             </div>
           </div>
-          <code class="px-3 py-1.5 rounded-lg bg-black/60 text-brand-300 font-mono text-xs border border-white/5 select-all">
+          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
             baton accept &lt;ID&gt; -n "验收通过"
           </code>
         </div>
@@ -386,8 +382,8 @@
   </main>
 
   <!-- Footer -->
-  <footer class="py-10 border-t border-white/5 bg-[#080a10] text-xs text-slate-500">
-    <div class="max-w-4xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+  <footer class="py-8 border-t border-white/5 bg-[#07090e] text-xs text-slate-500">
+    <div class="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="flex items-center space-x-2">
         <span class="font-bold text-slate-300">Agent Baton</span>
         <span>— 让 AI 协作真实靠谱</span>
@@ -400,122 +396,178 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
+  <!-- Live Dynamic Pipeline Choreography Logic -->
   <script>
-    let currentStep = 0;
-    function setStep(idx) {
-      currentStep = idx;
-      const tabs = document.querySelectorAll('.step-tab');
-      tabs.forEach((t, i) => {
-        if (i === idx) {
-          t.className = 'step-tab py-3.5 px-2 border-b-2 border-brand-400 text-brand-400 font-bold flex items-center justify-center space-x-1.5';
-          t.querySelector('span:first-child').className = 'w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-[10px]';
+    let currentStage = 0;
+    let timer = null;
+
+    const stagesData = [
+      {
+        nodeIdx: 0,
+        badgeText: "待命",
+        pulse: false,
+        metric: "INIT_TASK",
+        logZh: `<span class="text-brand-400">baton new impl task "重构认证模块"</span><br><span class="text-slate-400">已生成交接单：audit-20261105-01-task.md，待转递并启动探针。</span>`,
+        logEn: `<span class="text-brand-400">baton new impl task "Refactor Auth Subsystem"</span><br><span class="text-slate-400">Created ticket: audit-20261105-01-task.md, ready to forward & probe.</span>`
+      },
+      {
+        nodeIdx: 1,
+        badgeText: "0-Token 待机中",
+        pulse: true,
+        metric: "PROBE_SLEEPING",
+        logZh: `<span class="text-emerald-400">⚡ 探针已挂起！</span> <span class="text-slate-300">执行 baton forward --wait。发起方进入静音待机（0 CPU, 0 Token）。</span>`,
+        logEn: `<span class="text-emerald-400">⚡ Probe Activated!</span> <span class="text-slate-300">Ran baton forward --wait. Author entered silent sleep (0 CPU, 0 Token).</span>`
+      },
+      {
+        nodeIdx: 2,
+        badgeText: "实证查验中",
+        pulse: false,
+        metric: "VERIFY_COMMIT",
+        logZh: `<span class="text-amber-300">🔍 真实代码核验：</span> <span class="text-slate-300">接收方提交 Git Commit <code class="text-white">a1b2c3d</code> 与真实变动路径，通过底层检验！</span>`,
+        logEn: `<span class="text-amber-300">🔍 Evidence Verification:</span> <span class="text-slate-300">Worker submitted Git Commit <code class="text-white">a1b2c3d</code> and modified files. Verified!</span>`
+      },
+      {
+        nodeIdx: 3,
+        badgeText: "毫秒唤醒",
+        pulse: true,
+        metric: "AUTO_WAKEN",
+        logZh: `<span class="text-cyan-300 font-bold">🎉 回执落盘！</span> <span class="text-emerald-400">探针瞬间感知 Exit 0，发起方 AI 自动被唤醒验收合入！闭环完成。</span>`,
+        logEn: `<span class="text-cyan-300 font-bold">🎉 Receipt Landed!</span> <span class="text-emerald-400">Probe sensed event & exited 0. Author AI wakes up instantly to merge!</span>`
+      }
+    ];
+
+    function applyStage(idx) {
+      currentStage = idx;
+      const data = stagesData[idx];
+
+      // Update Node Highlight
+      for (let i = 0; i < 4; i++) {
+        const node = document.getElementById('node-' + i);
+        if (i === data.nodeIdx) {
+          node.classList.add('active-node');
         } else {
-          t.className = 'step-tab py-3.5 px-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center justify-center space-x-1.5';
-          t.querySelector('span:first-child').className = 'w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center text-[10px]';
+          node.classList.remove('active-node');
+        }
+      }
+
+      // Update Stage Buttons
+      const btns = document.querySelectorAll('.stage-btn');
+      btns.forEach((b, i) => {
+        if (i === idx) {
+          b.className = 'stage-btn px-2.5 py-1 rounded bg-brand-500 text-black font-bold font-mono text-[11px] transition-all';
+        } else {
+          b.className = 'stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all';
         }
       });
-      document.querySelectorAll('.step-panel').forEach((p, i) => {
-        if (i === idx) p.classList.remove('hidden');
-        else p.classList.add('hidden');
-      });
+
+      // Update Probe Pulse & Badge
+      const probePulse = document.getElementById('probe-pulse');
+      const probeBadge = document.getElementById('probe-badge');
+      if (data.pulse) {
+        probePulse.classList.remove('hidden');
+      } else {
+        probePulse.classList.add('hidden');
+      }
+      probeBadge.textContent = data.badgeText;
+
+      // Update Metric & Log
+      document.getElementById('probe-metric').textContent = data.metric;
+      document.getElementById('flow-log').innerHTML = isZh ? data.logZh : data.logEn;
     }
 
-    function nextStep() {
-      setStep((currentStep + 1) % 3);
+    function jumpStage(idx) {
+      clearInterval(timer);
+      applyStage(idx);
+      startLoop();
     }
+
+    function startLoop() {
+      timer = setInterval(() => {
+        applyStage((currentStage + 1) % stagesData.length);
+      }, 3500);
+    }
+
+    // Initialize flow loop
+    applyStage(0);
+    startLoop();
 
     // Copy Button
     const copyBtn = document.getElementById('copy-btn');
-    const copyTxt = document.getElementById('copy-txt');
+    const copyIcon = document.getElementById('copy-icon');
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText('npm install -g agent-baton');
-      copyTxt.textContent = isZh ? '已复制 ✓' : 'Copied! ✓';
-      setTimeout(() => copyTxt.textContent = isZh ? '复制' : 'Copy', 2000);
+      copyIcon.textContent = '✓';
+      setTimeout(() => copyIcon.textContent = '📋', 2000);
     });
 
-    // Bilingual dictionary (Plain & Simple)
+    // Bilingual Dictionary
     let isZh = true;
     const i18n = {
       zh: {
-        'nav-feature': '交接状态探针',
-        'nav-quick': '30秒上手',
-        'hero-tag': '专为多 AI 协同编程设计',
-        'hero-h1': 'AI 接力写代码，<br class="hidden sm:inline"/>用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话',
-        'hero-p': '别再让 AI “假装完成代码”。Baton 强制要求提供真实 Git 提交和修改文件；独特的<strong>交接状态探针</strong>让你在交接后 0 消耗静默待机，代码一完成瞬间自动唤醒！',
-        'btn-copy': '复制',
-        'probe-title': '交接状态探针：怎么让 AI 自动闭环？',
-        'probe-desc': '无需你在多个 AI 窗口间人肉复制粘贴，更不跑死循环发烫。',
-        'probe-live-label': '探针模式: 0-Token 事件驱动监听',
-        'step1-tab': '发起交接 & 探针待机',
-        'step2-tab': '接收方提交真实证据',
-        'step3-tab': '探针瞬间自动唤醒！',
-        's1-title': '交代任务并挂起探针，AI 进入“静音休眠”',
-        's1-desc': '发起方 AI 交代好修改目标后，执行转递命令。探针立即在后台挂起，等待期间不耗电脑性能、不耗 Token。',
-        's2-title': '拒绝“口头改完”！接收方必须携带真实 Commit 与改动文件',
-        's2-desc': '接收方 AI 施工完毕后提交回执。系统底层会物理检查 Git 提交历史和真实文件，嘴上说改了但没动代码的直接打回！',
-        's3-title': '回执一落盘，探针立刻 Exit 0，发起方 AI 自动醒来收尾！',
-        's3-desc': '底层基于操作系统的文件事件通知（fs.watch）。当真实回执保存的瞬间，休眠的发起方立刻被唤醒，自动完成闭环验收。',
-        'probe-bottom-tip': '核心价值：<strong>不信嘴说、不耗待机 Token、自动唤醒闭环</strong>。',
-        'probe-next': '下一步演示',
-        'diff-title': '用 Baton 写代码，体验有什么不同？',
-        'diff-desc': '普通开发者用 AI 协作时最容易踩的坑，一次性解决',
+        'tag-hero': '实证驱动 · 零耗能状态探针',
+        'h1-hero': 'AI 接力写代码，用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话',
+        'desc-hero': '必须携带真实 Git 提交与改动文件，空口自称直接拦截。<strong>交接状态探针</strong>静音休眠待机，回执到达毫秒自动唤醒！',
+        'pipeline-title': '实时交接流程图 · 动态闭环演示',
+        'stage-indicator': '阶段:',
+        'n1-title': '发起方 Agent',
+        'n1-desc': '创建任务单，列明修改要求与测试标准。',
+        'n2-title': '交接状态探针',
+        'n2-desc': '挂起后台静音监听，0 CPU、0 Token 待机。',
+        'n3-title': '接收方 & 真实证据',
+        'n3-desc': '施工改代码，必须附带 Git Commit 与变动文件。',
+        'n4-title': '探针唤醒 · 自动闭环',
+        'n4-desc': '回执到达秒级唤醒原会话，复核无误合入完成。',
+        'diff-title': '为什么不用传统对话，而要用 Baton 接力？',
+        'diff-desc': '解决多 AI 编程协作中最常踩的 3 大坑',
         'c1-h': '杜绝假装改完',
-        'c1-p': '以前 AI 经常嘴上说“已经修好”，实际上根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。',
+        'c1-p': '以前 AI 经常说“已经改好”，实际根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。',
         'c2-h': '静默待机不耗电',
         'c2-p': '不用死循环轮询，笔记本不再发烫。探针启动后 AI 彻底静默，等待期间零 CPU 占用、零 Token 浪费。',
         'c3-h': '自动唤醒不用人肉搬运',
-        'c3-p': '接收方写完回执的一瞬间，发起方自动被操作系统唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。',
+        'c3-p': '接收方写完回执的一瞬间，发起方自动被唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。',
         'qs-title': '日常使用只有 4 步',
         'qs-desc': '简单好记，不需要死记硬背复杂配置',
         'q1-t': '创建任务单',
-        'q1-d': '告诉 AI 要实现什么、验收目标是什么',
+        'q1-d': '明确任务目标与验收判据',
         'q2-t': '转递并启动探针',
-        'q2-d': '生成接单提示词，发起方自动静默待机',
+        'q2-d': '生成提示词，发起方自动静音待机',
         'q3-t': '接收方提交真实证据',
-        'q3-d': '写完代码后，带 Git commit 和修改路径交卷',
-        'q4-t': '自动唤醒并闭环',
-        'q4-d': '发起方自动苏醒，确认改动无误后关闭任务'
+        'q3-d': '必须附带 Git Commit 与变动文件',
+        'q4-t': '自动唤醒闭环',
+        'q4-d': '发起方自动苏醒，确认改动合入'
       },
       en: {
-        'nav-feature': 'Status Probe',
-        'nav-quick': 'Quickstart',
-        'hero-tag': 'Engineered for Multi-AI Pair Programming',
-        'hero-h1': 'Pass the Baton Between AI Agents with <br class="hidden sm:inline"/><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">Real Evidence</span>',
-        'hero-p': 'Stop letting AI hallucinate task completions. Baton enforces real Git commits & diffs. Our unique <strong>Status Probe</strong> puts your AI into 0-token silent sleep and wakes it up the exact millisecond code arrives.',
-        'btn-copy': 'Copy',
-        'probe-title': 'Status Probe: How Agents Auto-Loop Without You',
-        'probe-desc': 'No more manual copy-pasting between chat tabs. No CPU-burning polling loops.',
-        'probe-live-label': 'Probe Mode: 0-Token Event-Driven Listener',
-        'step1-tab': 'Forward & Sleep',
-        'step2-tab': 'Real Evidence Check',
-        'step3-tab': 'Instant Auto Wakeup!',
-        's1-title': 'Delegate Task & Activate Probe (Silent Sleep)',
-        's1-desc': 'Author AI creates ticket and forwards it. The probe puts the session to sleep immediately—0 CPU, 0 Token consumed.',
-        's2-title': 'No Fake Claims! Real Commits & Files Required',
-        's2-desc': 'Worker AI finishes coding. Baton verifies real commits on disk with git cat-file. Empty promises are rejected instantly.',
-        's3-title': 'Receipt Landed! Probe Exits 0 & Wakes Up Author!',
-        's3-desc': 'OS-level kernel file watcher (fs.watch) detects the receipt. Sleeping author session resumes instantly to verify and close.',
-        'probe-bottom-tip': 'Core Value: <strong>Real Proofs, Zero Token Waste, Automatic Wakeup</strong>.',
-        'probe-next': 'Next Step',
-        'diff-title': 'Why Baton Changes Your AI Coding Experience',
-        'diff-desc': 'Fixing the 3 biggest multi-agent headaches for everyday developers',
+        'tag-hero': 'Evidence-First · 0-Token Status Probe',
+        'h1-hero': 'Pass the Baton Between AI Agents with <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">Real Evidence</span>',
+        'desc-hero': 'Enforcing real Git commits & diffs. Our unique <strong>Status Probe</strong> puts your AI into 0-token silent sleep and wakes it up automatically.',
+        'pipeline-title': 'Live Handoff Pipeline · Dynamic Simulation',
+        'stage-indicator': 'Stage:',
+        'n1-title': 'Author Agent',
+        'n1-desc': 'Creates task ticket with objective acceptance criteria.',
+        'n2-title': 'Status Probe',
+        'n2-desc': 'Sleeps silently in background: 0 CPU, 0 Token consumed.',
+        'n3-title': 'Worker & Proof',
+        'n3-desc': 'Codes changes; must submit real Git commit SHA & paths.',
+        'n4-title': 'Auto Wakeup & Close',
+        'n4-desc': 'Receipt arrival auto-wakes author to verify and close.',
+        'diff-title': 'Why Use Baton Instead of Naive Chat?',
+        'diff-desc': 'Solving the 3 biggest multi-agent headaches',
         'c1-h': 'Zero Fake Completions',
-        'c1-p': 'AIs love to claim "Done and tested!" when nothing changed. Baton checks real Git commits—no code means no pass.',
-        'c2-h': 'Zero Token Burn & Heat',
-        'c2-p': 'No polling loops while waiting for other agents. Laptops stay cool, zero battery drain, zero wasted tokens.',
+        'c1-p': 'No more "Done & tested" without actual edits. Baton verifies commits on disk.',
+        'c2-h': 'Zero CPU & Token Waste',
+        'c2-p': 'No polling loops while waiting. Laptops stay cool, zero battery drain.',
         'c3-h': 'Zero Manual Copy-Pasting',
-        'c3-p': 'The moment the other AI finishes, your original session wakes up automatically to review and merge.',
-        'qs-title': '4 Simple Steps to Use',
+        'c3-p': 'Author wakes up automatically via OS event notification once receipt arrives.',
+        'qs-title': '4 Simple Steps in Daily Use',
         'qs-desc': 'Intuitive and easy to remember without complex setup',
         'q1-t': 'Create Ticket',
-        'q1-d': 'Define what to build and objective acceptance criteria',
-        'q2-t': 'Forward & Listen',
-        'q2-d': 'Generates pass prompt and puts author into silent wait',
+        'q1-d': 'Define goal and acceptance criteria',
+        'q2-t': 'Forward & Sleep',
+        'q2-d': 'Outputs pass prompt and enters silent wait',
         'q3-t': 'Submit Evidence',
-        'q3-d': 'Worker completes code with real Git commit & paths',
-        'q4-t': 'Auto Wakeup & Close',
-        'q4-d': 'Author wakes up automatically, verifies diff, and closes'
+        'q3-d': 'Must include Git commit and file paths',
+        'q4-t': 'Auto Wakeup',
+        'q4-d': 'Author resumes automatically and closes'
       }
     };
 
@@ -529,6 +581,7 @@
         const k = el.getAttribute('data-i18n');
         if (dict[k]) el.innerHTML = dict[k];
       });
+      applyStage(currentStage);
     });
   </script>
 </body>
