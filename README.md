@@ -1,8 +1,15 @@
-# Agent Baton (`baton`) 
+# Agent Baton (`baton`)
+
+<div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node: >=18](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
-[![Dependencies: Zero](https://img.shields.io/badge/dependencies-0-brightgreen.svg)]()
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)]()
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+**🌐 English | [简体中文](docs/zh-CN/README.md)**
+
+</div>
 
 > **Evidence-First, Zero-Trust Handoff & Double-Blind Audit Protocol for AI Coding Agents.**  
 > *Pass the baton between AI agents with cryptographic proofs, zero-token reactive sleep, and strict anti-spoofing audit gates.*
@@ -13,16 +20,16 @@
 
 Modern AI coding agents (Claude Code, Cursor, Codex, OpenHands, Swarms) are incredible at writing code, but disastrous at **self-governance**:
 
-1. **Hallucinated Receipts**: An agent claims *"I've refactored the auth module and all tests pass!"*, but in reality it touched nothing. Naive frameworks take its word and close the task.
-2. **Sycophancy & Confirmation Bias**: When a reviewer agent inspects work while reading the author's internal chain-of-thought (CoT), it tends to flatter and agree with the author's shortcuts.
-3. **Self-Closing Loopholes**: Without cryptographic identity checks, a single agent script can pretend to be the auditor, approving its own pull request.
-4. **Token Exhaustion & Overheating**: Waiting for async multi-agent tasks using polling loops drains thousands of tokens and keeps your CPU burning.
+| Industry Pitfall | Traditional Frameworks | Agent Baton Guarantee |
+| :--- | :--- | :--- |
+| **Hallucinated Receipts** | Agent says *"I've tested it"*; framework blindly accepts and closes task. | **Evidence-First Gate**: Requires tangible Git commits and paths verified via `git cat-file -e`. |
+| **Sycophancy & Priming** | Reviewer agent reads author's train-of-thought and excuses missing tests. | **Double-Blind Audit (`--blind`)**: Automatically strips `<thinking>` and subjective excuses. |
+| **Self-Closing Loopholes** | Single session switches role, approving its own PR. | **Audit Nonces & Separation of Powers**: Ephemeral cryptographic challenges block self-signing. |
+| **Token Exhaustion** | Polling loops drain tokens and overheat CPU while waiting for async agents. | **0-Token Reactive Wakeup**: OS kernel events (`fs.watch`) put the agent to sleep at 0 CPU/Token cost. |
 
 ---
 
-## 🛡️ The Solution: Agent Baton
-
-`agent-baton` is a lightweight, zero-dependency CLI and Git-native protocol that treats AI agent collaboration with **real-world software engineering discipline**:
+## 🛡️ Architecture & Workflow
 
 ```mermaid
 flowchart LR
@@ -69,17 +76,17 @@ flowchart LR
 # Global installation via npm
 npm install -g agent-baton
 
-# Link CLI shortcuts (creates `baton` and `handoff` shims)
+# Link CLI shortcuts (creates `baton`, `agent-baton`, and `handoff` shims)
 baton link
 ```
 
 ### Initialize in Your Project
 
 ```bash
-# Intra-repo mode (inside an existing codebase)
+# Intra-repo mode (inside an existing codebase; creates .handoffs/)
 baton init --lanes impl,audit,arch
 
-# Or Cross-repo mode (central neutral hub for microservices)
+# Or Cross-repo mode (central neutral hub coordinating multiple microservices)
 baton init --cross --targets api,frontend,docs
 ```
 
@@ -127,21 +134,27 @@ baton accept audit-20261105-01-task -n "Accepted."
 
 ---
 
-## 🛠️ CLI Command Reference
+## 🔬 Under the Hood: How Baton Enforces Invariants
 
-| Command | Description |
-| :--- | :--- |
-| `baton init [--cross]` | Initialize intra-repo `.handoffs/` or central hub |
-| `baton status [--for <lane>] [--mermaid]` | View pending tasks or render flowcharts |
-| `baton new <target\|lane> <type> "<title>"` | Create a structured handoff ticket |
-| `baton forward <id> [--blind] [--wait]` | Transfer task, strip thinking & sleep until reply |
-| `baton receipt <id> [evidence flags]` | File verified receipt with Git SHA & paths |
-| `baton wait <id> [--timeout <dur>]` | 0-Token event-driven watcher |
-| `baton check` | Verify invariants & ensure clean workspace before commit |
-| `baton install` | Inject/refresh agent instruction stubs into `AGENTS.md` |
+1. **Git SHA Verification**:
+   When `--evidence-commits <sha>` is provided, Baton executes `git cat-file -e <sha>^{commit}` inside the repository. If the commit does not exist or was amended away, submission is rejected.
+2. **Ephemeral Challenge Store**:
+   Audit Nonces are kept in an isolated `.audit-challenges.json` protected by OS file permissions. Once verified during `baton receipt`, the challenge token is immediately wiped to prevent replay attacks.
+3. **Adaptive Backoff & Event-Driven Engine**:
+   While `fs.watch` captures instantaneous disk writes, Baton employs an exponential backoff fallback timer (2s $\to$ 4s $\to$ 8s $\to$ 15s) ensuring 100% notification delivery while preserving system battery life.
+
+---
+
+## 📚 Documentation & Specifications
+
+- **[CLI Command Manual](COMMANDS.md)**: Exhaustive manual for all CLI flags, options, and exit codes.
+- **[Receipt Specification](RESPONSE-TEMPLATE.md)**: Single source of truth for execution receipt schemas.
+- **[Architecture & Design Whitepaper](DESIGN.md)**: Deep dive into multi-agent coordination theory and post-mortems.
+- **[Contributing Guide](CONTRIBUTING.md)**: Setup, testing guidelines, and PR workflow.
+- **[简体中文文档](docs/zh-CN/README.md)**: Complete Chinese documentation and guides.
 
 ---
 
 ## 📄 License
 
-MIT © [Lab Agent Engineering Team](https://github.com/churze/agent-baton)
+MIT © [Lab Agent Engineering Team](https://github.com/ChurzeXo/agent-baton)
