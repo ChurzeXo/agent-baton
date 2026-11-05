@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "lab-handoff-hub",
+  "version": "2.16.0",
+  "mode": "cross",
+  "description": "Central Handoff Hub for cross-repo and intra-repo coordination",
+  "targets": [
+    "swoop",
+    "prospero",
+    "iggle",
+    "coreml",
+    "tappy",
+    "yiqiyihuihua"
+  ],
+  "target_labels": {
+    "swoop": "Swoop",
+    "prospero": "Prospero",
+    "iggle": "iggle",
+    "coreml": "iggle-coreml",
+    "tappy": "Tappy",
+    "yiqiyihuihua": "一期一卉花"
+  },
+  "lane_roles": {
+    "impl": "实现方",
+    "audit": "审计方",
+    "arch": "架构设计方",
+    "design": "架构设计方"
+  }
+}

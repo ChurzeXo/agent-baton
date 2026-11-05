@@ -1,0 +1,32 @@
+{
+  "name": "agent-baton",
+  "version": "1.0.0",
+  "description": "Evidence-First, Zero-Trust Handoff & Double-Blind Audit Protocol for AI Coding Agents",
+  "type": "module",
+  "main": "handoff.mjs",
+  "bin": {
+    "baton": "./handoff.mjs",
+    "agent-baton": "./handoff.mjs",
+    "handoff": "./handoff.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node handoff.mjs status"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "coding-agents",
+    "multi-agent",
+    "handoff",
+    "baton",
+    "audit",
+    "zero-trust",
+    "protocol",
+    "workflow",
+    "git"
+  ],
+  "license": "MIT"
+}

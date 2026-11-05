@@ -1,0 +1,17 @@
+# Runtime data directories
+handoffs/
+receipts/
+inbox/
+.audit-challenges.json
+.handoff-worktrees/
+
+# Dependencies
+node_modules/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.log
