@@ -55,9 +55,6 @@ date: YYYY-MM-DD
 
 ## 遗留与建议 (Notes & Follow-ups)
 <Optional notes for downstream maintainers or next steps>
-
-## 转递提示词 (Forwarding Prompt)
-请【<发起角色>】查收【<本方角色>】回执：<回执路径>（<结论> · 是否需改动：<是/否>）
 ```
 
 ---

@@ -309,7 +309,7 @@ function checkReceiptPrompt(f, fm, raw, problems) {
   if (MODE === 'intra-repo' || fm?.mode === 'intra-repo' || fm?.workspace === 'same') return;
   // 标题允许带后缀（如「## 转递提示词（必含 · 供用户原样复制）」），故不锚行尾。
   // 逐行切分取节体——不用正则前瞻：JS 无 \Z（那是 Python），照搬会在 JS 里退化成字面「Z」而匹配失败。
-  const secs = receiptSections(raw, '转递提示词');
+  const secs = [...receiptSections(raw, '交接提示词'), ...receiptSections(raw, '转递提示词')];
   if (!secs.length) {
     problems.push(`[回执] 缺「## 转递提示词」节 — 契约 v2.11 起跨仓/异工作区/仓内同工作区回执须含该节（COREML-* 除外）: ${f}`);
     return;
@@ -1445,12 +1445,15 @@ function cmdPrompt(args) {
     const display = hFile.startsWith(os.homedir()) ? '~' + hFile.slice(os.homedir().length) : hFile;
     console.log(`📋 仓内交接 (${id}) · workspace=${ws}:`);
     console.log(`   主题: ${title}`);
-    console.log(`\n📋 接单提示词（复制给【${toRole}】Agent，一行即完整）:\n`);
-    console.log(`请【${toRole}】接单：${display}（${title}）\n`);
+    console.log(`\n## 交接提示词\n`);
+    console.log(`> 直接复制下方提示词，发送给接收方 Agent 接单：\n`);
+    console.log(`\`\`\`text`);
+    console.log(`请【${toRole}】接单：${display}（${title}）`);
+    console.log(`\`\`\`\n`);
     if (ws !== 'same') {
-      console.log(`（发送方注 · 异工作区请先同步工作树。回执须含「## 转递提示词」节 + evidence。）\n`);
+      console.log(`（发送方注 · 异工作区请先同步工作树。）\n`);
     } else {
-      console.log(`（若已挂起后台监听，状态机将自动感知唤醒；多会话协同可将此行贴在回复最末块 ## 转递提示词 下。）\n`);
+      console.log(`（若已挂起后台监听，回执登记后状态机会自动感知唤醒发起方闭环。）\n`);
     }
     if (auditContract) console.log(auditContract);
     return;
@@ -1519,12 +1522,12 @@ const STUB_BODY = `### Agent Baton (Handoff) 接入桩（强制守卫 · 细则�
 - receipt 前确保 status 快照 **< 60 分钟**（超时重跑）。
 - 仓内优先读 frontmatter \`workspace\`（same/separate），禁用 mtime 推断。
 - 执行方**只写 receipt**，**不做 accept/reject**。
-- 回执正文唯一源 = \`$(lab path handoffs)/RESPONSE-TEMPLATE.md\`：**照抄其「回执模板（可直接复制）」骨架**（含 evidence 字段与「## 转递提示词」节），勿另起格式、勿凭记忆重建（骨架外 = 没有）。
+- 回执正文唯一源 = \`$(lab path handoffs)/RESPONSE-TEMPLATE.md\`：**照抄其「回执模板（可直接复制）」骨架**（含 evidence 字段），勿另起格式、勿凭记忆重建（骨架外 = 没有）。
 - **evidence 硬门禁（v2.12.3）**：仓内新回执（2026-10-14 起）**必须**附可核验证据 \`--evidence-paths "真实文件,..."\` / \`--evidence-commits "<sha>"\`（无文件改动用 \`--evidence-note "<原因>"\`）；声称的路径须真实存在、提交须 \`git cat-file -e\` 可查，否则 receipt / accept / check 三处拒收。**只声明不改 = 伪回执**（2026-10-13 goods-stores 事故教训）。
 - 收尾必须 \`baton check\`（或 \`handoff check\`）exit 0（2026-10-13 起回执须「非空正文 + 含 ## 节 + 含『状态 / 结论』锚节」；存量豁免）。
-- **回复收尾（全场景统一规约）**：无论出站（派发交接）还是入站（交付回执），**回复最末块均固定为 \`## 转递提示词\`**（其下一行贴控制台打印的接单/交付行，其后无任何正文）。确保多会话/多窗口协同人类一键无缝粘贴流转（若同会话已挂起后台监听，状态机亦会自动唤醒闭环，双轨互不冲突）。
+- **回复收尾（交接提示词规范）**：发起交接（出站）时，回复最末块**必须固定为 \`## 交接提示词\`**，包含清晰描述并将具体的接单指令置于独立代码块中，标题/描述与提示词清晰分离，方便人类一键复制代码块发给接收方 Agent（其后无任何正文）。执行方提交回执（入站）时，因发起方已挂起后台探针自动唤醒，无需再写回执提示词。
 - **审计动作契约（v2.13 · to_lane=audit 强制）**：审计方（接收方 to_lane=audit）**严禁仅静态读码**——必须在终端**独立执行**交接文档「验收判据」中的**所有测试与校验命令**，以实测输出为唯一准绳，**严禁采信自报**（执行方回执里的「已通过」一律视为待验证声明，不采信）。其余 lane 亦建议独立实测，但审计 lane 为硬纪律。
-- **仓内提示词用自然角色（v2.13）**：同仓提示词**严禁出现项目名 / lane slug 当角色**（如「请 Tappy 收交接」「请 impl lane 收交接」）。出站 = \`请【<目标角色>】接单：<交接路径>（<主题>）\`；入站回执交付 = \`请【<发起角色>】查收【<本方角色>】回执：<回执路径>（<结论> · 是否需改动：<是/否>）\`。角色由 lane 映射（impl→实现方 / audit→审计方 / arch·design→架构设计方；\`.handoff-hub.json\` 的 \`lane_labels\` 可覆盖）。
+- **仓内提示词用自然角色（v2.13）**：同仓提示词**严禁出现项目名 / lane slug 当角色**（如「请 Tappy 收交接」「请 impl lane 收交接」）。出站 = \`请【<目标角色>】接单：<交接路径>（<主题>）\`。角色由 lane 映射（impl→实现方 / audit→审计方 / arch·design→架构设计方；\`.handoff-hub.json\` 的 \`lane_labels\` 可覆盖）。
 - **防提前闭环与双盲审计防伪（v2.16.0）**：回执**必须由接收方 to_lane 独立撰写**——发起方（from_lane）禁止自填回执；\`to_lane=audit\` 派发时自动签发一次性 \`Audit Nonce\`，审计回执必须携带 \`--audit-nonce "<nonce>"\`，硬性拦截同一会话自签；支持 \`baton forward --blind\` 物理脱敏主观思维链与自辩借口。
 
 **最小操作序列（出站 = 建/发交接 · 强制闭环）**
@@ -1532,16 +1535,21 @@ const STUB_BODY = `### Agent Baton (Handoff) 接入桩（强制守卫 · 细则�
 2. **转递并挂起后台监听（必须执行）**：
    执行 \`baton forward <ID> --wait\`（置于后台运行 \`run_in_background: true\`；需双盲脱敏加 \`--blind\`）
    ——一条命令完成标记转递、打印接单提示词与挂起待机；回执到达后 Exit 0 自动唤醒本会话进行独立验收闭环。
-3. **输出转递提示词**：将控制台打印的接单提示词贴在**回复最末块** \`## 转递提示词\` 下（其后无任何正文），便于人类在多窗口或向对方发送。
+3. **输出交接提示词（末块规范）**：将控制台打印的接单提示词贴在回复最末块，标题、描述与独立代码块分离（其后无任何正文）：
+   ## 交接提示词
+   > 直接复制下方提示词，发送给接收方 Agent 接单：
+   \`\`\`text
+   请【<目标角色>】接单：<交接路径>（<主题>）
+   \`\`\`
 
 **最小操作序列（入站 = 接单/回执）**
 1. \`baton status --for <本方 lane|target>\`（冷启动直取本方待办；全量 \`baton status\` 供发起方巡检）
 2. 从「待办」（draft/forwarded）筛选归属当前方（仓内 \`to_lane == 当前 lane\`；跨仓 = 落在目标收件箱）→ 确认目标 ID
 3. \`baton show <ID>\`
 4. 按边界最小改动（仅该 lane 应改文件）
-5. 写回执：**照抄 \`$(lab path handoffs)/RESPONSE-TEMPLATE.md\` 骨架**（含 evidence 与「## 转递提示词」节）→ \`baton receipt <ID> -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"\`（若 \`to_lane=audit\` 须附 \`--audit-nonce "<nonce>"\`；仓内必附 evidence；无文件改动用 \`--evidence-note\`）
+5. 写回执：**照抄 \`$(lab path handoffs)/RESPONSE-TEMPLATE.md\` 骨架** → \`baton receipt <ID> -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"\`（若 \`to_lane=audit\` 须附 \`--audit-nonce "<nonce>"\`；仓内必附 evidence；无文件改动用 \`--evidence-note\`）
 6. \`baton check\`（exit 0）
-7. **交付收尾**：将控制台打印的回执交付行贴在**回复最末块** \`## 转递提示词\` 下（其后无任何正文；发起方若有后台监听将自动唤醒）。
+7. **自动唤醒闭环**：回执登记后，发起方后台监听探针将自动 Exit 0 唤醒进行验收，无需人工回传回执。
 
 详见 \`$(lab path handoffs)/AGENT-GUIDE.md\` 获取完整版 Preflight。`;
 // marker 包裹 + 生成注 + 实算 sha；sha 供 check 校验（v2.12）。
