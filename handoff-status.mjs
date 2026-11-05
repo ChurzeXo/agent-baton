@@ -18,11 +18,9 @@ let MODE = 'cross';
 //   --json=v2   → v2（仅 --for 时有效，新增 target 感知的 pending + counts；禁止替换 v1）
 let JSON_MODE = false;
 let JSON_V2 = false;
-let MERMAID_MODE = false;
 for (const a of process.argv) {
   if (a === '--json') JSON_MODE = true;
   else if (a === '--json=v2') { JSON_MODE = true; JSON_V2 = true; }
-  else if (a === '--mermaid') MERMAID_MODE = true;
   else if (a === '--root') { const i = process.argv.indexOf(a); if (process.argv[i + 1]) ROOT = process.argv[i + 1]; }
   else if (a.startsWith('--root=')) { ROOT = a.slice('--root='.length); }
   else if (a === '--mode') { const i = process.argv.indexOf(a); if (process.argv[i + 1]) MODE = process.argv[i + 1]; }
@@ -34,15 +32,34 @@ const R_DIR = path.join(ROOT, 'receipts');
 // ── 依赖方视角（--for <target>，跨仓）／ --for <lane>（仓内）──
 // 依赖方 agent 用「我的待办」单一入口：只列 target===<target>（或 to_lane===<lane>）且未闭环的交接。
 // 是否计入 pending 见 isPendingFor：draft + forwarded 一律计入（v2.7 修正，不再按 target 区分）。
-// 支持从 .handoff-hub.json 动态配置 targets，未配置时回退默认集合
+const VALID_TARGETS = new Set(['swoop', 'prospero', 'iggle', 'coreml', 'tappy', 'yiqiyihuihua']);
 let hubCfg = null;
-try { hubCfg = JSON.parse(fs.readFileSync(path.join(ROOT, '.handoff-hub.json'), 'utf8')); } catch { /* 读不到回退 */ }
-const DEFAULT_TARGETS = ['swoop', 'prospero', 'iggle', 'coreml', 'tappy', 'yiqiyihuihua'];
-const VALID_TARGETS = new Set(
-  (hubCfg && Array.isArray(hubCfg.targets) && hubCfg.targets.length > 0)
-    ? hubCfg.targets.map(s => String(s).toLowerCase())
-    : DEFAULT_TARGETS
-);
+try {
+  const cfgPath = path.join(ROOT, '.handoff-hub.json');
+  if (fs.existsSync(cfgPath)) hubCfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+} catch {}
+
+function detectLang() {
+  if (process.env.BATON_LANG) {
+    return process.env.BATON_LANG.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  }
+  if (hubCfg && (hubCfg.locale || hubCfg.lang)) {
+    return String(hubCfg.locale || hubCfg.lang).toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  }
+  const allLabels = [
+    ...Object.values((hubCfg && (hubCfg.lane_labels || hubCfg.lane_roles)) || {}),
+    ...Object.values((hubCfg && hubCfg.target_labels) || {})
+  ];
+  if (allLabels.some(r => /[\u4e00-\u9fa5]/.test(String(r)))) {
+    return 'zh';
+  }
+  const envLang = process.env.LC_ALL || process.env.LC_MESSAGES || process.env.LANG || '';
+  if (envLang.toLowerCase().startsWith('zh')) {
+    return 'zh';
+  }
+  return 'en';
+}
+
 let FOR = '';
 for (let i = 0; i < process.argv.length; i++) {
   if (process.argv[i] === '--for' && process.argv[i + 1]) { FOR = process.argv[i + 1].toLowerCase(); break; }
@@ -167,9 +184,15 @@ const receiptButStale = open.filter(r => r.hasReceipt && r.status !== 'received'
 // v2.12.5 · P1-b 标签分区：仓内 draft/forwarded 渲染「待执行」——原「待转递/已转递」是跨仓
 // 口吻（发起方视角的转递进度），放在仓内会被读成「已发出去、有人接手了」，误导执行 lane 不动工
 // （同仓新单天生停在 draft，标签还说「待转递」= 暗示『不该我处理』）。跨仓标签保持不变。
-const STATUS_LABEL = MODE === 'intra-repo'
-  ? { draft: '待执行', forwarded: '待执行', received: '已收回执', closed: '已闭环' }
-  : { draft: '待转递', forwarded: '已转递', received: '已收回执', closed: '已闭环' };
+const isZh = detectLang() === 'zh';
+
+const STATUS_LABEL = isZh
+  ? (MODE === 'intra-repo'
+      ? { draft: '待执行', forwarded: '待执行', received: '已收回执', closed: '已闭环' }
+      : { draft: '待转递', forwarded: '已转递', received: '已收回执', closed: '已闭环' })
+  : (MODE === 'intra-repo'
+      ? { draft: 'Pending Execution', forwarded: 'Pending Execution', received: 'Receipt Submitted', closed: 'Closed' }
+      : { draft: 'Draft', forwarded: 'Forwarded', received: 'Receipt Submitted', closed: 'Closed' });
 
 // 只引导固定命令（/inbox、/sync），不带 <ID> 的 /handoff 子命令——带 ID 命令用户记不住。
 function nextStep(r) {
@@ -177,23 +200,31 @@ function nextStep(r) {
     // v2.12.5：仓内下一步给动作而非只给状态复读——「lane=x · 待执行」读者仍不知道该干嘛；
     // 对齐 --for 视图的 nextStepFor，让中央视图每项自带「读→写」动作。
     const lane = r.to_lane || '?';
-    if (r.status === 'received') return `lane=${lane} · 已收回执（等发起 lane 实测后 close）`;
-    if (r.status === 'closed') return `lane=${lane} · 已闭环`;
-    return `lane=${lane} · 待执行：读 ${r.file} 开工 → 写 receipts/${r.id}-resp.md`;
+    if (r.status === 'received') {
+      return isZh
+        ? `lane=${lane} · 已收回执（等发起 lane 实测后 close）`
+        : `lane=${lane} · Receipt submitted (awaiting initiator verification to close)`;
+    }
+    if (r.status === 'closed') {
+      return isZh ? `lane=${lane} · 已闭环` : `lane=${lane} · Closed`;
+    }
+    return isZh
+      ? `lane=${lane} · 待执行：读 ${r.file} 开工 → 写 receipts/${r.id}-resp.md`
+      : `lane=${lane} · Pending: read ${r.file} → write receipts/${r.id}-resp.md`;
   }
   const t = (r.target || '').toLowerCase();
   switch (r.status) {
     case 'draft':
-      if (t === 'coreml') return '同工作区，无需转递：切 coreml 角色执行 → 写回执';
-      if (t === 'iggle') return '依赖方发起，iggle 侧适配本仓';
-      return `待转递：输 /inbox 生成收件箱转给 ${t}`;
+      if (t === 'coreml') return isZh ? '同工作区，无需转递：切 coreml 角色执行 → 写回执' : 'Same workspace: switch to coreml role → write receipt';
+      if (t === 'iggle') return isZh ? '依赖方发起，iggle 侧适配本仓' : 'Initiated by dependency, adapter work';
+      return isZh ? `待转递：输 /inbox 生成收件箱转给 ${t}` : `Pending forward: pass to ${t}`;
     case 'forwarded':
-      if (t === 'coreml') return '规格已定稿，可开工（切 coreml 角色）';
-      if (t === 'iggle') return '已转递，等 iggle 适配回执';
-      return `已转递，等 ${t} 回执（回执到后输 /sync 登记）`;
+      if (t === 'coreml') return isZh ? '规格已定稿，可开工（切 coreml 角色）' : 'Spec finalized, ready to execute (coreml)';
+      if (t === 'iggle') return isZh ? '已转递，等 iggle 适配回执' : 'Forwarded, awaiting adapter receipt';
+      return isZh ? `已转递，等 ${t} 回执（回执到后输 /sync 登记）` : `Forwarded, awaiting ${t} receipt`;
     case 'received':
-      if (t === 'iggle') return 'iggle 已回执，等依赖方独立实测后闭环';
-      return `已收 ${t} 回执：你（iggle）独立实测后闭环`;
+      if (t === 'iggle') return isZh ? 'iggle 已回执，等依赖方独立实测后闭环' : 'Receipt submitted, awaiting verification';
+      return isZh ? `已收 ${t} 回执：你（iggle）独立实测后闭环` : `Received ${t} receipt: verify independently then close`;
     default:
       return '';
   }
@@ -216,22 +247,28 @@ function isPendingFor(_target, status) {
 // 与中心视角 nextStep 相反：这里「我」= target，只有 isPendingFor() 为真的项才进 pending。
 function nextStepFor(r) {
   if (MODE === 'intra-repo') {
-    if (r.status === 'received') return '已回执，等发起 lane 独立实测后 close';
-    return `读 handoffs/${r.id}.md 开工 → 写 receipts/${r.id}-resp.md`;
+    if (r.status === 'received') {
+      return isZh
+        ? '已回执，等发起 lane 独立实测后 close'
+        : 'Receipt submitted, awaiting initiator verification to close';
+    }
+    return isZh
+      ? `读 handoffs/${r.id}.md 开工 → 写 receipts/${r.id}-resp.md`
+      : `Read handoffs/${r.id}.md to start → write receipts/${r.id}-resp.md`;
   }
   const t = (r.target || '').toLowerCase();
   switch (r.status) {
     case 'draft':
       // v2.7 起所有 target 的 draft 都进 pending
       return t === 'coreml'
-        ? `同工作区，读完交接即可切 coreml 角色开工 → 写 receipts/${r.id}-resp.md`
-        : `待 ${t} 处理：读 handoffs/${r.id}.md 直接开工 → 写 receipts/${r.id}-resp.md`;
+        ? (isZh ? `同工作区，读完交接即可切 coreml 角色开工 → 写 receipts/${r.id}-resp.md` : `Same workspace: read handoff and start as coreml → write receipts/${r.id}-resp.md`)
+        : (isZh ? `待 ${t} 处理：读 handoffs/${r.id}.md 直接开工 → 写 receipts/${r.id}-resp.md` : `Pending for ${t}: read handoffs/${r.id}.md to start → write receipts/${r.id}-resp.md`);
     case 'forwarded':
       return t === 'coreml'
-        ? `规格已定稿，切 coreml 角色开工 → 写 receipts/${r.id}-resp.md`
-        : `已转递，读 handoffs/${r.id}.md 直接开工 → 写 receipts/${r.id}-resp.md`;
+        ? (isZh ? `规格已定稿，切 coreml 角色开工 → 写 receipts/${r.id}-resp.md` : `Spec finalized, start as coreml → write receipts/${r.id}-resp.md`)
+        : (isZh ? `已转递，读 handoffs/${r.id}.md 直接开工 → 写 receipts/${r.id}-resp.md` : `Forwarded: read handoffs/${r.id}.md to start → write receipts/${r.id}-resp.md`);
     case 'received':
-      return '已回执，等 iggle 独立实测后 close';
+      return isZh ? '已回执，等 iggle 独立实测后 close' : 'Receipt submitted, awaiting verification to close';
     default:
       return '';
   }
@@ -241,25 +278,7 @@ if (FOR) {
   // 依赖方视角：只列 target===FOR（跨仓）或 to_lane===FOR（仓内）且未闭环；pending 按角色语义过滤（isPendingFor）。
   const laneMatch = (r) => MODE === 'intra-repo' ? (r.to_lane === FOR) : (r.target === FOR);
   const mine = rows.filter(r => laneMatch(r) && r.status !== 'closed');
-  if (MERMAID_MODE) {
-  const mLines = ['```mermaid', 'flowchart LR'];
-  const displayRows = FOR ? mine : open;
-  if (!displayRows.length) {
-    mLines.push('  empty["(无未闭环任务)"]');
-  } else {
-    for (const r of displayRows) {
-      const from = r.from || (MODE === 'intra-repo' ? 'impl' : 'hub');
-      const to = r.target || r.to || 'executor';
-      const label = `${r.id}\\n[${r.status}]`;
-      mLines.push(`  ${from}["${from}"] -->|"${label}"| ${to}["${to}"]`);
-    }
-  }
-  mLines.push('```');
-  console.log(mLines.join('\n'));
-  process.exit(0);
-}
-
-if (JSON_MODE) {
+  if (JSON_MODE) {
     if (JSON_V2) {
       const pending = mine.filter(r => isPendingFor(FOR, r.status)).map(r => ({
         handoff_id: r.id,
@@ -282,56 +301,64 @@ if (JSON_MODE) {
   const todo = mine.filter(r => isPendingFor(FOR, r.status));
   const recv = mine.filter(r => r.status === 'received');
   const lines = [];
-  lines.push(`[交接追踪 · ${ROOT}] ${FOR} 未闭环 ${mine.length} 项（${MODE === 'intra-repo' ? 'lane' : 'target'}=${FOR}）`);
-  if (mine.length === 0) {
-    lines.push(`✅ 没有待 ${FOR} 处理的交接。`);
+  if (isZh) {
+    lines.push(`[交接追踪 · ${ROOT}] ${FOR} 未闭环 ${mine.length} 项（${MODE === 'intra-repo' ? 'lane' : 'target'}=${FOR}）`);
+    if (mine.length === 0) {
+      lines.push(`✅ 没有待 ${FOR} 处理的交接。`);
+    } else {
+      if (todo.length) {
+        lines.push(`- 待 ${FOR} 处理（${todo.length}）:`);
+        for (const r of todo) {
+          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+          const step = nextStepFor(r);
+          if (step) lines.push(`      → 下一步：${step}`);
+        }
+      }
+      if (recv.length) {
+        lines.push(MODE === 'intra-repo'
+          ? `- 已回执待发起 lane 实测（${recv.length}）:`
+          : `- 已回执待 iggle 实测（${recv.length}）:`);
+        for (const r of recv) {
+          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+          const step = nextStepFor(r);
+          if (step) lines.push(`      → 下一步：${step}`);
+        }
+      }
+    }
+    if (warnings.length) {
+      lines.push('⚠️ 规范性问题（请修正以免影响 agent 识别）：');
+      for (const w of warnings) lines.push(`  - ${w}`);
+    }
   } else {
-    if (todo.length) {
-      lines.push(`- 待 ${FOR} 处理（${todo.length}）:`);
-      for (const r of todo) {
-        lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
-        const step = nextStepFor(r);
-        if (step) lines.push(`      → 下一步：${step}`);
+    lines.push(`[Baton Status · ${ROOT}] ${FOR}: ${mine.length} open item(s) (${MODE === 'intra-repo' ? 'lane' : 'target'}=${FOR})`);
+    if (mine.length === 0) {
+      lines.push(`✅ No pending handoffs for ${FOR}.`);
+    } else {
+      if (todo.length) {
+        lines.push(`- Pending for ${FOR} (${todo.length}):`);
+        for (const r of todo) {
+          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+          const step = nextStepFor(r);
+          if (step) lines.push(`      → Next step: ${step}`);
+        }
+      }
+      if (recv.length) {
+        lines.push(MODE === 'intra-repo'
+          ? `- Receipt submitted, awaiting initiator verification (${recv.length}):`
+          : `- Receipt submitted, awaiting verification (${recv.length}):`);
+        for (const r of recv) {
+          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+          const step = nextStepFor(r);
+          if (step) lines.push(`      → Next step: ${step}`);
+        }
       }
     }
-    if (recv.length) {
-      // 分组标题按模式分支（2026-10-18 修）：跨仓「实测」方恒为 iggle（hub 属主）；
-      // 仓内是发起 lane（from_lane）独立实测。原硬编码「待 iggle 实测」无 MODE 守卫，
-      // intra-repo 的 --for <lane> 同样命中 → Tappy 等仓内 received 项被烙错章，
-      // agent 转述成「待 iggle 实测」，使用者误判为串仓（与 handoff.mjs:709 同类病根）。
-      lines.push(MODE === 'intra-repo'
-        ? `- 已回执待发起 lane 实测（${recv.length}）:`
-        : `- 已回执待 iggle 实测（${recv.length}）:`);
-      for (const r of recv) {
-        lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
-        const step = nextStepFor(r);
-        if (step) lines.push(`      → 下一步：${step}`);
-      }
+    if (warnings.length) {
+      lines.push('⚠️ Compliance issues:');
+      for (const w of warnings) lines.push(`  - ${w}`);
     }
-  }
-  if (warnings.length) {
-    lines.push('⚠️ 规范性问题（请修正以免影响 agent 识别）：');
-    for (const w of warnings) lines.push(`  - ${w}`);
   }
   console.log(lines.join('\n'));
-  process.exit(0);
-}
-
-if (MERMAID_MODE) {
-  const mLines = ['```mermaid', 'flowchart LR'];
-  const displayRows = FOR ? mine : open;
-  if (!displayRows.length) {
-    mLines.push('  empty["(无未闭环任务)"]');
-  } else {
-    for (const r of displayRows) {
-      const from = r.from || (MODE === 'intra-repo' ? 'impl' : 'hub');
-      const to = r.target || r.to || 'executor';
-      const label = `${r.id}\\n[${r.status}]`;
-      mLines.push(`  ${from}["${from}"] -->|"${label}"| ${to}["${to}"]`);
-    }
-  }
-  mLines.push('```');
-  console.log(mLines.join('\n'));
   process.exit(0);
 }
 
@@ -341,39 +368,71 @@ if (JSON_MODE) {
 }
 
 const lines = [];
-lines.push(`[交接追踪 · ${ROOT}] 进行中 ${open.length} 项 / 总计 ${rows.length} 项`);
-if (rows.length === 0) {
-  lines.push('✅ 公共交接目录为空（或已全部闭环）。');
-} else {
-  // v2.12.5 · P1-b：仓内 draft/forwarded 同为「待执行」——分桶会连出两个同名标题，
-  // 故合并一桶；跨仓保持原「按状态分桶 + 原标签」逐字不变（--json 消费方不受影响）。
-  const buckets = MODE === 'intra-repo'
-    ? [
-        ['待执行', open.filter(r => r.status === 'draft' || r.status === 'forwarded')],
-        ['已收回执', byStatus.received || []],
-        ...[...new Set(open.map(r => r.status))].sort()
-          .filter(st => !['draft', 'forwarded', 'received'].includes(st))
-          .map(st => [STATUS_LABEL[st] || st, byStatus[st]]),
-      ].filter(([, arr]) => arr.length)
-    : [...new Set(open.map(r => r.status))].sort().map(st => [STATUS_LABEL[st] || st, byStatus[st]]);
-  for (const [label, arr] of buckets) {
-    lines.push(`- ${label}（${arr.length}）:`);
-    for (const r of arr) {
-      lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
-      const step = nextStep(r);
-      if (step) lines.push(`      → 下一步：${step}`);
+if (isZh) {
+  lines.push(`[交接追踪 · ${ROOT}] 进行中 ${open.length} 项 / 总计 ${rows.length} 项`);
+  if (rows.length === 0) {
+    lines.push('✅ 公共交接目录为空（或已全部闭环）。');
+  } else {
+    const buckets = MODE === 'intra-repo'
+      ? [
+          ['待执行', open.filter(r => r.status === 'draft' || r.status === 'forwarded')],
+          ['已收回执', byStatus.received || []],
+          ...[...new Set(open.map(r => r.status))].sort()
+            .filter(st => !['draft', 'forwarded', 'received'].includes(st))
+            .map(st => [STATUS_LABEL[st] || st, byStatus[st]]),
+        ].filter(([, arr]) => arr.length)
+      : [...new Set(open.map(r => r.status))].sort().map(st => [STATUS_LABEL[st] || st, byStatus[st]]);
+    for (const [label, arr] of buckets) {
+      lines.push(`- ${label}（${arr.length}）:`);
+      for (const r of arr) {
+        lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+        const step = nextStep(r);
+        if (step) lines.push(`      → 下一步：${step}`);
+      }
+    }
+    if (receiptButStale.length) {
+      lines.push(MODE === 'intra-repo'
+        ? '⚠️ 已收到回执但未翻状态（仓内：发起 lane 跑 handoff receipt <id> 登记回执并翻 received）:'
+        : '⚠️ 已收到回执但未翻状态（请核对是否需升依赖版本 / 改调用）:');
+      for (const r of receiptButStale) lines.push(`  - ${r.id}`);
     }
   }
-  if (receiptButStale.length) {
-    // 2026-10-18 修：仓内模式的下一步是发起 lane 跑 handoff receipt 登记，不是「升依赖版本」。
-    lines.push(MODE === 'intra-repo'
-      ? '⚠️ 已收到回执但未翻状态（仓内：发起 lane 跑 handoff receipt <id> 登记回执并翻 received）:'
-      : '⚠️ 已收到回执但未翻状态（请核对是否需升依赖版本 / 改调用）:');
-    for (const r of receiptButStale) lines.push(`  - ${r.id}`);
+  if (warnings.length) {
+    lines.push('⚠️ 规范性问题（请修正以免影响 agent 识别）：');
+    for (const w of warnings) lines.push(`  - ${w}`);
   }
-}
-if (warnings.length) {
-  lines.push('⚠️ 规范性问题（请修正以免影响 agent 识别）：');
-  for (const w of warnings) lines.push(`  - ${w}`);
+} else {
+  lines.push(`[Baton Status · ${ROOT}] In Progress: ${open.length} / Total: ${rows.length}`);
+  if (rows.length === 0) {
+    lines.push('✅ Hub directory is empty (or all handoffs are closed).');
+  } else {
+    const buckets = MODE === 'intra-repo'
+      ? [
+          ['Pending Execution', open.filter(r => r.status === 'draft' || r.status === 'forwarded')],
+          ['Receipt Submitted', byStatus.received || []],
+          ...[...new Set(open.map(r => r.status))].sort()
+            .filter(st => !['draft', 'forwarded', 'received'].includes(st))
+            .map(st => [STATUS_LABEL[st] || st, byStatus[st]]),
+        ].filter(([, arr]) => arr.length)
+      : [...new Set(open.map(r => r.status))].sort().map(st => [STATUS_LABEL[st] || st, byStatus[st]]);
+    for (const [label, arr] of buckets) {
+      lines.push(`- ${label} (${arr.length}):`);
+      for (const r of arr) {
+        lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+        const step = nextStep(r);
+        if (step) lines.push(`      → Next step: ${step}`);
+      }
+    }
+    if (receiptButStale.length) {
+      lines.push(MODE === 'intra-repo'
+        ? '⚠️ Receipt received but status not updated (run baton receipt <id> to register):'
+        : '⚠️ Receipt received but status not updated:');
+      for (const r of receiptButStale) lines.push(`  - ${r.id}`);
+    }
+  }
+  if (warnings.length) {
+    lines.push('⚠️ Compliance issues:');
+    for (const w of warnings) lines.push(`  - ${w}`);
+  }
 }
 console.log(lines.join('\n'));
