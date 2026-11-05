@@ -24,24 +24,31 @@ CLI 已有 60 分钟新鲜度门禁（receipt/accept/reject 时拦）和 check �
 - [ ] 落手判定成立：仓内 → `to_lane == 当前 lane` 且为待办（draft/forwarded）；跨仓 → 落在目标收件箱且未闭环。
 - [ ] 当前动作符合强制操作序列（见下）。
 - [ ] 若要 `receipt`，status 快照距今 **< 60 分钟**。超时必须重跑。
-- [ ] 若要 `receipt`，预见 `-n` 能满足 check 要求（非空正文 + 含 `##` 节 + 含「状态 / 结论」锚节 + 含「## 转递提示词」节；**仅跨仓 `COREML-*` 免**，仓内 `workspace=same` **不豁免**——回执交付行不豁免，见下方「免转递豁免」条）。
-- [ ] 若本轮有转递：**回复最末块固定为** `## 转递提示词`（其下**仅一行**、其后**无任何正文/结束语**）；仅跨仓 / 仓内 `workspace=separate` 才写。
+- [ ] 若要 `receipt`，预见 `-n` 能满足 check 要求（非空正文 + 含 `##` 节 + 含「状态 / 结论」锚节；仓内必附 `--evidence-paths` / `--evidence-commits` / `--evidence-note`）。
+- [ ] 若本轮有发起交接（出站）：**回复最末块固定为交接提示词（由本地 AI 根据用户当前语言自适应呈现：中文用 `## 交接提示词`，英文用 `## Baton Pass Prompt`）**。标题、描述说明与具体的接单指令必须严格分离，提示词置于独立代码块（```text）中，方便人类一键复制（其后无任何正文）。执行方提交回执（入站）时，因发起方已挂起后台探针自动唤醒，无需再写回执提示词。
 
-**任意否定 → 禁止调用工具。先跑 `handoff status`，再按结果决定下一步。**
+**任意否定 → 禁止调用工具。先跑 `baton status`（或 `handoff status`），再按结果决定下一步。**
 
 ## 强制操作序列（入站 = 接单/回执 · 仓内）
-1. `handoff status --for <本方 lane>`（冷启动直取本方待办；全量 `handoff status` 供发起方巡检 / 无 `--for` 也可，按上定义筛）
+1. `baton status --for <本方 lane>`（冷启动直取本方待办；全量 `baton status` 供发起方巡检）
 2. 从「待办」（`draft`/`forwarded`）筛选 `to_lane == 当前 lane`。确认目标 ID（如多条且未指定 → 列出并请用户点名，不擅自选）
-3. `handoff show <ID>`
+3. `baton show <ID>`
 4. 按边界最小改动（仅该 lane 应改文件）
-5. 写回执：**照抄 `~/Documents/lab/handoffs/RESPONSE-TEMPLATE.md`「回执模板（可直接复制）」骨架**（含「## 转递提示词」节）→ `handoff receipt <ID> -n "<正文>"`
-6. `handoff check`（exit 0）
-7. **回复最末块** `## 转递提示词`：其下一行回执交付行，其后无正文（仅 COREML-* 免转递不写）。仓内 = `请【<发起角色>】查收【<本方角色>】回执：<回执路径>（<结论> · 是否需改动：<是/否>）`；跨仓 = `请收 <本仓> 回执：<回执路径>（…）`。该行为 `handoff receipt` 成功后 CLI **自动打印**，照抄即可（仓内用角色式，勿用跨仓「请收 <本仓>」格式）。
+5. 写回执：**照抄 `$(lab path handoffs)/RESPONSE-TEMPLATE.md`「回执模板（可直接复制）」骨架** → `baton receipt <ID> -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"`（若 `to_lane=audit` 须附 `--audit-nonce "<nonce>"`；无改动用 `--evidence-note`）
+6. `baton check`（exit 0）
+7. **自动唤醒闭环**：回执登记后，发起方后台监听探针将自动 Exit 0 唤醒进行独立验收，无需人工回传回执。
 
-## 强制操作序列（出站 = 建/发交接）
-1. `handoff new <target|lane> <type> "<标题>"`
-2. `handoff forward <ID>`（可选事后标记：跨仓留痕；仓内 `workspace=same` 无转递事件可跳过——执行方照旧按待办动工）
-3. `handoff prompt <ID>` → 取输出一行，贴在**回复最末块** `## 转递提示词` 下，转给接收方（仓内 `workspace=same` 免转递，此步跳过）
+## 强制操作序列（出站 = 建/发交接 · 强制闭环）
+1. `baton new <target|lane> <type> "<标题>"` 并填写正文
+2. **转递并挂起后台监听（必须执行）**：
+   执行 `baton forward <ID> --wait`（置于后台运行 `run_in_background: true`；需双盲脱敏加 `--blind`）
+   ——一条命令完成标记转递、打印接单提示词与挂起待机；回执到达后 Exit 0 自动唤醒本会话进行独立验收闭环。
+3. **输出交接提示词（末块规范）**：本地 AI 根据用户本地语言自适应输出，标题、描述与独立代码块分离（其后无任何正文）：
+   ## 交接提示词
+   > 直接复制下方提示词，发送给接收方 Agent 接单：
+   ```text
+   请【<目标角色>】接单：<交接路径>（<主题>）
+   ```
 
 ## 审计动作契约（v2.13 · to_lane=audit 强制）
 > 审计方（接收方 `to_lane=audit`）**严禁仅静态读码**——必须在终端**独立执行**交接文档「验收判据」中的**所有测试与校验命令**，以实测输出为唯一准绳，**严禁采信自报**（执行方回执里的「已通过」一律视为待验证声明，不采信）。
