@@ -2,16 +2,24 @@
 handoffs/
 receipts/
 inbox/
+archive/
+legacy/
+logs/
+reviews/
 .audit-challenges.json
 .handoff-worktrees/
 
 # Dependencies
 node_modules/
+package-lock.json
+*.tgz
+*.zip
 
 # OS / Editor files
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+.workbuddy/
 *.swp
 *.log

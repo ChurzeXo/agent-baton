@@ -1,576 +1,1381 @@
 <!DOCTYPE html>
-<html lang="zh" class="dark scroll-smooth">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Baton — AI 编程交接棒与状态探针</title>
-  <meta name="description" content="AI 编程接力协议与状态探针：必须附带真实代码改动，状态探针静默待机、完成后自动唤醒。">
+  <title>Agent Baton — 跨仓/同仓 Agent 任务交割像调 API 一样无损直达</title>
+  <meta name="description" content="跨仓/同仓 Agent 间任务交割像调 API 一样无损直达。拒绝人肉传话与上下文衰减，独立窗口双盲审计，事件驱动无感闭环。">
+  <meta name="theme-color" content="#080B10">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Agent Baton — AI 编程交接棒与状态探针">
-  <meta property="og:description" content="提交必须带真实代码证据，状态探针静默待机、完成后毫秒级自动唤醒。">
+  <meta property="og:title" content="Agent Baton — 跨仓/同仓 Agent 任务交割像调 API 一样无损直达">
+  <meta property="og:description" content="拒绝人肉传话与上下文衰减。一条命令穿透仓库边界，接口与协作契约严密对齐，独立窗口双盲审计，事件驱动无感闭环。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://churzexo.github.io/agent-baton/">
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: {
-              400: '#34d399',
-              500: '#10b981',
-              600: '#059669',
-            }
-          }
-        }
-      }
-    }
-  </script>
 
   <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:        #080B10;
+      --surface:   #0D1119;
+      --surface-2: #11161F;
+      --inset:     #05070B;
+      --hover:     #161C26;
+
+      --line:      rgba(255,255,255,.075);
+      --line-2:    rgba(255,255,255,.14);
+
+      --fg:        #EDF2F7;
+      --fg-2:      #A3AEBD;
+      --fg-3:      #6B7687;
+
+      --accent:      #5FE3BC;
+      --accent-2:    #8BF0D2;
+      --accent-soft: rgba(95,227,188,.10);
+      --accent-line: rgba(95,227,188,.30);
+      --accent-ink:  #04231A;
+
+      --amber:      #E7B679;
+      --amber-soft: rgba(231,182,121,.10);
+
+      --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+      --maxw: 1160px;
+      --radius: 14px;
+    }
+
+    /* ── Reset & base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 88px; }
     body {
-      background-color: #07090e;
-      color: #f1f5f9;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
-    .bg-grid {
-      background-size: 32px 32px;
-      background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    ::selection { background: var(--accent); color: var(--accent-ink); }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+    code, pre { font-family: var(--mono); }
+    svg { display: block; }
+    strong { color: var(--fg); font-weight: 700; }
+    p code, li code {
+      font-size: .88em;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: .1em .38em;
+      border-radius: 4px;
     }
-    .hero-glow {
-      background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.18), transparent 75%);
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+    /* Ambient background: quiet grid + one restrained accent bloom */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: -2;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 44px 44px;
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 78%);
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 78%);
+      pointer-events: none;
     }
-    .flow-card {
-      background: rgba(13, 17, 26, 0.85);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    body::after {
+      content: '';
+      position: fixed; left: 50%; top: -340px; transform: translateX(-50%);
+      width: 1000px; height: 620px; z-index: -1;
+      background: radial-gradient(ellipse at center, rgba(95,227,188,.055), transparent 68%);
+      pointer-events: none;
     }
-    .flow-card.active-node {
-      border-color: rgba(52, 211, 153, 0.8);
-      box-shadow: 0 0 25px -3px rgba(16, 185, 129, 0.4), 0 15px 35px -10px rgba(0, 0, 0, 0.9);
-      transform: translateY(-2px);
+
+    /* ── Layout primitives ─────────────────────────────────────── */
+    .container { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+    .section { padding: 108px 0; border-top: 1px solid var(--line); }
+    .section--tight { padding: 84px 0; }
+
+    .eyebrow {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+      display: inline-flex; align-items: center; gap: 10px;
     }
-    .radar-pulse {
-      animation: radarRipple 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    .eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--accent); opacity: .7; }
+
+    .section-head { margin-bottom: 56px; max-width: 780px; }
+    .section-head h2 {
+      margin: 20px 0 16px;
+      font-size: clamp(1.85rem, 3.4vw, 2.65rem);
+      line-height: 1.18; letter-spacing: -.035em; font-weight: 800;
     }
-    @keyframes radarRipple {
-      0% { transform: scale(0.9); opacity: 0.9; }
-      100% { transform: scale(2.2); opacity: 0; }
+    .section-head p { margin: 0; color: var(--fg-2); font-size: 15px; line-height: 1.8; max-width: 680px; }
+
+    .mono-label {
+      font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--fg-3);
     }
-    @keyframes flowBeam {
-      0% { stroke-dashoffset: 160; }
-      100% { stroke-dashoffset: 0; }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .site-header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(8,11,16,.82);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border-bottom: 1px solid var(--line);
     }
-    .animated-beam {
-      stroke-dasharray: 12, 140;
-      animation: flowBeam 2.2s linear infinite;
+    .site-header::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-line) 45%, transparent);
+    }
+    .header-inner { height: 68px; display: flex; align-items: center; gap: 32px; }
+
+    .brand { display: inline-flex; align-items: center; gap: 11px; flex-shrink: 0; }
+    .logo-mark {
+      width: 32px; height: 32px; border-radius: 9px;
+      display: grid; place-items: center;
+      background: linear-gradient(145deg, var(--accent-2), #2FB98D);
+      color: var(--accent-ink);
+      box-shadow: 0 0 0 1px rgba(95,227,188,.25), 0 6px 20px -8px rgba(95,227,188,.5);
+    }
+    .logo-mark svg { width: 18px; height: 18px; }
+    .brand-name { font-weight: 800; font-size: 15px; letter-spacing: -.02em; }
+    .version-chip {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      color: var(--accent); background: var(--accent-soft);
+      border: 1px solid var(--accent-line);
+      padding: 2px 7px; border-radius: 5px; margin-left: 9px;
+      vertical-align: 2px;
+    }
+
+    .nav { display: flex; align-items: center; gap: 26px; margin-left: auto; }
+    .nav a {
+      font-size: 13px; color: var(--fg-2); transition: color .2s;
+      position: relative;
+    }
+    .nav a:hover { color: var(--fg); }
+
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .install-pill {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-family: var(--mono); font-size: 11.5px; color: var(--fg-2);
+      background: var(--surface); border: 1px solid var(--line-2);
+      padding: 7px 11px; border-radius: 8px; transition: all .2s;
+    }
+    .install-pill:hover { border-color: var(--accent-line); color: var(--fg); background: var(--hover); }
+    .install-pill .prompt { color: var(--accent); font-weight: 600; }
+    .icon-btn {
+      width: 34px; height: 34px; display: grid; place-items: center;
+      border: 1px solid var(--line-2); border-radius: 8px;
+      color: var(--fg-2); background: var(--surface); transition: all .2s;
+    }
+    .icon-btn:hover { color: var(--fg); border-color: var(--accent-line); background: var(--hover); }
+    .icon-btn svg { width: 16px; height: 16px; }
+    .lang-btn {
+      font-size: 12px; font-weight: 600; padding: 7px 12px;
+      border: 1px solid var(--line-2); border-radius: 8px;
+      color: var(--fg-2); background: var(--surface); transition: all .2s;
+    }
+    .lang-btn:hover { color: var(--fg); border-color: var(--accent-line); }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 13px 20px; border-radius: 9px;
+      font-size: 13.5px; font-weight: 700; letter-spacing: -.01em;
+      transition: transform .2s, background .2s, border-color .2s, box-shadow .2s;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary {
+      background: var(--accent); color: var(--accent-ink);
+      box-shadow: 0 10px 30px -12px rgba(95,227,188,.55);
+    }
+    .btn-primary:hover { background: var(--accent-2); box-shadow: 0 14px 34px -12px rgba(95,227,188,.7); }
+    .btn-primary .btn-sub { font-family: var(--mono); font-size: 11px; font-weight: 500; opacity: .68; }
+    .btn-ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--line-2); }
+    .btn-ghost:hover { background: var(--hover); border-color: var(--accent-line); }
+    .btn svg { width: 15px; height: 15px; }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero { padding: 116px 0 108px; }
+    .hero-grid {
+      display: grid; grid-template-columns: 1.1fr .9fr;
+      gap: 88px; align-items: center;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+      color: var(--accent); margin-bottom: 30px;
+    }
+    .hero-tag .dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(95,227,188,.12);
+    }
+    .hero h1 {
+      margin: 0 0 26px;
+      font-size: clamp(2.4rem, 4.4vw, 3.4rem);
+      line-height: 1.2; letter-spacing: -.04em; font-weight: 800;
+    }
+    .hero h1 .hl { color: var(--accent); }
+    .hero-lead {
+      margin: 0 0 34px; max-width: 470px;
+      font-size: 15.5px; line-height: 1.9; color: var(--fg-2);
+    }
+    .hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 26px; }
+    .hero-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; color: var(--fg-2);
+      padding-bottom: 3px; border-bottom: 1px solid var(--line-2);
+      transition: color .2s, border-color .2s;
+    }
+    .hero-link:hover { color: var(--accent); border-color: var(--accent); }
+    .hero-link svg { width: 14px; height: 14px; transition: transform .2s; }
+    .hero-link:hover svg { transform: translateX(3px); }
+
+    .hero-facts {
+      display: flex; flex-wrap: wrap; align-items: center;
+      margin: 40px 0 0;
+      font-family: var(--mono); font-size: 11px; letter-spacing: .02em;
+      color: var(--fg-3);
+    }
+    .hero-facts span + span::before { content: '·'; margin: 0 14px; opacity: .6; }
+    .hero-facts em { font-style: normal; font-weight: 600; color: var(--accent); }
+
+    /* Terminal */
+    .terminal {
+      background: var(--inset);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 32px 80px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .terminal-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px; border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .terminal-path {
+      font-family: var(--mono); font-size: 11px; color: var(--fg-3);
+      display: inline-flex; align-items: center; gap: 9px;
+    }
+    .terminal-path svg { width: 14px; height: 14px; color: var(--accent); }
+    .live-chip {
+      font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .1em;
+      color: var(--accent); display: inline-flex; align-items: center; gap: 6px;
+    }
+    .live-chip::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent); animation: blink 2.2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+
+    .terminal-body { padding: 28px 24px 30px; font-family: var(--mono); font-size: 11.5px; line-height: 1.95; }
+    .tstep { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
+    .tstep + .tstep { margin-top: 20px; }
+    .tstep-num { color: var(--fg-3); font-size: 10.5px; padding-top: 1px; }
+    .t-cmd { color: var(--fg); }
+    .t-cmd .t-prompt { color: var(--accent); margin-right: 7px; }
+    .t-out { color: var(--fg-3); }
+    .t-out .ok { color: var(--accent); }
+    .t-out .wait { color: var(--amber); }
+    .terminal-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 16px; border-top: 1px solid var(--line);
+      background: var(--surface);
+      font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+      color: var(--fg-3);
+    }
+    .terminal-foot .state { color: var(--accent); font-weight: 600; }
+
+    /* Compatibility strip */
+    .compat {
+      border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.012);
+    }
+    .compat-inner {
+      display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+      padding: 22px 0;
+    }
+    .compat-label { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--fg-3); white-space: nowrap; }
+    .compat-list { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; font-size: 13px; color: var(--fg-2); font-weight: 600; }
+    .compat-list span { display: inline-flex; align-items: center; gap: 22px; }
+    .compat-list span::after { content: '·'; color: var(--fg-3); font-weight: 400; }
+    .compat-list span:last-child::after { display: none; }
+    .compat-list span:last-child { color: var(--fg-3); font-weight: 500; }
+
+    /* ── Section 01: Pipeline ──────────────────────────────────── */
+    .pipeline-head {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 32px; flex-wrap: wrap;
+    }
+    .segmented {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 4px; background: var(--surface);
+      border: 1px solid var(--line-2); border-radius: 10px;
+    }
+    .seg-btn {
+      font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+      color: var(--fg-3); padding: 7px 12px; border-radius: 7px;
+      transition: all .2s; white-space: nowrap;
+    }
+    .seg-btn:hover { color: var(--fg); }
+    .seg-btn.is-active { background: var(--accent); color: var(--accent-ink); }
+    .flow-label { font-family: var(--mono); font-size: 10px; color: var(--fg-3); letter-spacing: .1em; margin-right: 4px; }
+
+    /* ── Section 01: Interactive architecture diagram ─────────── */
+    .diagram {
+      margin-top: 44px;
+      border: 1px solid var(--line-2); border-radius: 14px;
+      background: var(--inset); overflow: hidden;
+    }
+    .diagram-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 12px 18px;
+      border-bottom: 1px solid var(--line); background: var(--surface);
+      font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+      color: var(--fg-3);
+    }
+    .diagram-bar .live { color: var(--accent); display: inline-flex; align-items: center; gap: 7px; }
+    .diagram-bar .live::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent); animation: blink 2.2s ease-in-out infinite;
+    }
+    .diagram-scroll { overflow-x: auto; padding: 8px 12px 12px; }
+    .diagram-svg { display: block; width: 100%; height: auto; min-width: 760px; }
+    .diagram-hint { display: none; }
+
+    /* SVG primitives — styled via CSS so design tokens stay authoritative */
+    .dz { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 6; }
+    .dz-label { fill: var(--fg-3); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; }
+    .dplus { stroke: var(--fg-3); stroke-width: 1; opacity: .35; }
+    .dedge { fill: none; stroke: var(--line-2); stroke-width: 1.4; transition: stroke .35s, stroke-width .35s; }
+    .dedge.is-active { stroke: var(--accent); stroke-width: 1.9; stroke-dasharray: 7 6; animation: dashflow .75s linear infinite; }
+    @keyframes dashflow { to { stroke-dashoffset: -13; } }
+    .dedge--wait { stroke-dasharray: 4 6; }
+    .dedge--reject { stroke: rgba(231,182,121,.42); stroke-dasharray: 4 6; }
+    .dedge--reject.is-active { stroke: var(--amber); stroke-dasharray: 7 6; animation: dashflow .75s linear infinite; }
+    #arrow path { fill: var(--fg-3); }
+    #arrow-amber path { fill: var(--amber); }
+    .edge-label { fill: var(--fg-3); font-family: var(--mono); font-size: 9px; letter-spacing: .06em; }
+    .edge-label--amber { fill: var(--amber); opacity: .85; }
+    .edge-label--accent { fill: var(--accent); opacity: .85; }
+
+    .dnode { cursor: pointer; }
+    .dnode .dn-box {
+      fill: var(--surface); stroke: var(--line-2); stroke-width: 1;
+      transition: fill .35s, stroke .35s;
+    }
+    .dnode:hover .dn-box { stroke: var(--accent-line); }
+    .dnode.is-active .dn-box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; }
+    .dnode .dn-bar { fill: var(--accent); opacity: 0; transition: opacity .35s; }
+    .dnode.is-active .dn-bar { opacity: 1; }
+    .dn-num { fill: var(--fg-3); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; transition: fill .35s; }
+    .dnode.is-active .dn-num { fill: var(--accent); }
+    .dn-title { fill: var(--fg); font-family: var(--mono); font-size: 13px; font-weight: 600; }
+    .dn-desc { fill: var(--fg-3); font-family: var(--mono); font-size: 9.5px; }
+    .dn-halo { fill: none; stroke: var(--accent); stroke-width: 1; opacity: 0; transform-box: fill-box; transform-origin: center; }
+    .dnode.is-active .dn-halo { animation: dhalo 2.6s ease-out infinite; }
+    @keyframes dhalo { 0% { opacity: .4; transform: scale(.97) } 100% { opacity: 0; transform: scale(1.055) } }
+
+    .dgate { fill: var(--surface); stroke: var(--line-2); stroke-width: 1.2; transition: fill .35s, stroke .35s; }
+    .dgate.is-active { fill: var(--accent-soft); stroke: var(--accent); }
+    .dgate-t { fill: var(--fg); font-family: var(--mono); font-size: 11px; font-weight: 600; text-anchor: middle; }
+    .dgate-s { fill: var(--fg-3); font-family: var(--mono); font-size: 8.5px; text-anchor: middle; }
+    .dpulse { fill: var(--accent); }
+    .dpulse--soft { fill: var(--accent); opacity: .16; }
+
+    /* Detail panel — one of four, driven by the active stage */
+    .dd-wrap {
+      margin-top: 18px; border: 1px solid var(--line-2);
+      border-radius: 12px; background: var(--surface); overflow: hidden;
+    }
+    .dd-panel { display: none; }
+    .dd-panel.is-active { display: block; animation: ddfade .35s ease; }
+    @keyframes ddfade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+    .dd-head { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+    .dd-num { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: -.04em; }
+    .dd-title { font-family: var(--mono); font-size: 13.5px; font-weight: 600; margin: 0; }
+    .dd-sub { font-size: 12.5px; color: var(--fg-3); margin: 3px 0 0; }
+    .dd-tag {
+      margin-left: auto; font-family: var(--mono); font-size: 9.5px;
+      color: var(--fg-3); border: 1px solid var(--line-2);
+      padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+    }
+    .dd-points { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; margin: 0; padding: 0; }
+    .dd-points li { padding: 20px 24px; border-right: 1px solid var(--line); }
+    .dd-points li:last-child { border-right: 0; }
+    .pt-title { font-size: 12px; font-weight: 700; color: var(--fg); margin-bottom: 4px; }
+    .pt-desc { font-size: 11px; line-height: 1.7; color: var(--fg-3); }
+
+    /* Live console */
+    .console {
+      margin-top: 20px; display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; padding: 20px 22px;
+      background: var(--inset); border: 1px solid var(--line-2); border-radius: 12px;
+      font-family: var(--mono); font-size: 11.5px; min-height: 92px;
+    }
+    .console-main { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
+    .console-caret { color: var(--accent); font-size: 17px; font-weight: 700; line-height: 1.1; }
+    #flow-log { color: var(--fg-2); line-height: 1.8; word-break: break-word; }
+    .log-tag { color: var(--accent); font-weight: 600; }
+    .log-cmd { color: var(--fg); }
+    .log-note { color: var(--fg-3); }
+    .log-ok { color: var(--accent); font-weight: 600; }
+    .console-side { text-align: right; flex-shrink: 0; color: var(--fg-3); font-size: 9.5px; letter-spacing: .08em; line-height: 2; }
+    #probe-metric { color: var(--accent); font-weight: 600; display: block; font-size: 11px; }
+
+    /* ── Section 02: Problem / defense rows ────────────────────── */
+    .rows { border-top: 1px solid var(--line); }
+    .row {
+      display: grid; grid-template-columns: 56px 1fr 232px;
+      gap: 24px; align-items: start;
+      padding: 32px 0; border-bottom: 1px solid var(--line);
+      transition: background .25s;
+    }
+    .row:hover { background: rgba(255,255,255,.014); }
+    .row-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      border: 1px solid var(--line-2); background: var(--surface);
+      display: grid; place-items: center; color: var(--accent);
+    }
+    .row-icon svg { width: 19px; height: 19px; }
+    .row h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+    .row p { margin: 0; font-size: 13.5px; line-height: 1.8; color: var(--fg-2); max-width: 640px; }
+    .proof {
+      align-self: center; font-family: var(--mono); font-size: 10.5px;
+      color: var(--accent); background: var(--accent-soft);
+      border: 1px solid var(--accent-line); border-radius: 7px;
+      padding: 9px 12px; line-height: 1.5;
+    }
+    .proof.amber { color: var(--amber); background: var(--amber-soft); border-color: rgba(231,182,121,.25); }
+
+    /* ── Section 03: Workflow timeline ─────────────────────────── */
+    .timeline { position: relative; padding-left: 0; }
+    .tl-step {
+      display: grid; grid-template-columns: 64px minmax(220px, .85fr) 1.15fr;
+      gap: 28px; align-items: center;
+      padding: 26px 0; border-top: 1px solid var(--line);
+    }
+    .tl-step:last-child { border-bottom: 1px solid var(--line); }
+    .tl-num {
+      font-family: var(--mono); font-size: 26px; font-weight: 600;
+      color: var(--fg-3); letter-spacing: -.04em; line-height: 1;
+      position: relative;
+    }
+    .tl-num::after {
+      content: ''; position: absolute; left: 0; top: 34px; width: 1px; height: 42px;
+      background: var(--line-2);
+    }
+    .tl-step:last-child .tl-num::after { display: none; }
+    .tl-step:nth-child(1) .tl-num { color: var(--accent); }
+    .tl-title { font-size: 15px; font-weight: 700; margin: 0 0 5px; letter-spacing: -.01em; }
+    .tl-desc { font-size: 12.5px; color: var(--fg-3); margin: 0; line-height: 1.7; }
+
+    .codeblock {
+      background: var(--inset); border: 1px solid var(--line-2);
+      border-radius: 10px; overflow: hidden;
+    }
+    .codeblock-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 13px; border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .codeblock-lang { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; color: var(--fg-3); }
+    .copy-btn {
+      font-family: var(--mono); font-size: 10px; color: var(--fg-3);
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 6px; border-radius: 5px; transition: all .2s;
+    }
+    .copy-btn:hover { color: var(--accent); background: var(--accent-soft); }
+    .copy-btn svg { width: 12px; height: 12px; }
+    .codeblock pre {
+      margin: 0; padding: 15px 16px; overflow-x: auto;
+      font-size: 11.5px; line-height: 1.7; color: var(--accent);
+    }
+
+    /* ── Section 04: Topologies ────────────────────────────────── */
+    .topo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .topo-card {
+      padding: 30px; border: 1px solid var(--line);
+      border-radius: var(--radius); background: var(--surface);
+      transition: border-color .25s, transform .25s;
+    }
+    .topo-card:hover { border-color: var(--accent-line); transform: translateY(-3px); }
+    .topo-mode { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; color: var(--accent); }
+    .topo-card h3 { margin: 14px 0 9px; font-size: 18px; font-weight: 700; letter-spacing: -.025em; }
+    .topo-card p { margin: 0 0 22px; font-size: 13px; line-height: 1.8; color: var(--fg-2); }
+    .topo-viz {
+      border: 1px dashed var(--line-2); border-radius: 10px;
+      background: var(--inset); padding: 14px; margin-bottom: 20px;
+    }
+    .topo-viz svg { width: 100%; height: auto; }
+    .tv-wire { fill: none; stroke: var(--line-2); stroke-width: 1.2; }
+    .tv-node { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 1; }
+    .tv-node--hub { fill: var(--accent-soft); stroke: var(--accent-line); }
+    .tv-text { fill: var(--fg-2); font-family: var(--mono); font-size: 9px; }
+    .tv-text--hub { fill: var(--accent); font-weight: 600; }
+    .topo-note {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-top: 18px; padding: 14px 18px;
+      border: 1px solid var(--line); border-radius: 10px;
+      background: rgba(255,255,255,.015); font-size: 12.5px; color: var(--fg-2);
+    }
+    .topo-note .mono-label { color: var(--accent); margin-left: auto; }
+
+    /* ── Section 05: Quickstart ────────────────────────────────── */
+    .quickstart { padding: 96px 0 104px; border-top: 1px solid var(--line); text-align: center; }
+    .qs-panel {
+      position: relative; overflow: hidden;
+      border: 1px solid var(--accent-line); border-radius: 20px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(95,227,188,.10), transparent 62%),
+        var(--surface);
+      padding: 64px 40px 58px;
+    }
+    .qs-panel::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 340px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .qs-panel h2 {
+      margin: 18px 0 14px; font-size: clamp(1.9rem, 3.6vw, 2.7rem);
+      font-weight: 800; letter-spacing: -.035em; line-height: 1.2;
+    }
+    .qs-panel > p { margin: 0 auto 34px; max-width: 560px; color: var(--fg-2); font-size: 14.5px; line-height: 1.8; }
+    .qs-install {
+      max-width: 520px; margin: 0 auto 30px; text-align: left;
+      background: var(--inset); border: 1px solid var(--line-2); border-radius: 12px;
+      padding: 20px 22px; font-family: var(--mono); font-size: 12px;
+    }
+    .qs-comment { color: var(--fg-3); font-size: 10.5px; margin-bottom: 7px; }
+    .qs-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--accent); }
+    .qs-line + .qs-comment { margin-top: 18px; }
+    .qs-cta { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    .site-footer { border-top: 1px solid var(--line); padding: 38px 0 34px; }
+    .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .footer-brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--fg-3); }
+    .footer-brand strong { color: var(--fg); font-size: 13px; }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; font-size: 12px; color: var(--fg-2); }
+    .footer-links a { transition: color .2s; }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-bottom {
+      margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line);
+      font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--fg-3);
+      display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+
+    /* ── Reveal ────────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+      .reveal.in { opacity: 1; transform: none; }
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 1080px) {
+      .nav { display: none; }
+      .hero-grid { gap: 56px; }
+      .row { grid-template-columns: 48px 1fr; }
+      .proof { grid-column: 2; justify-self: start; margin-top: 4px; }
+    }
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero { padding: 80px 0 76px; }
+      .hero-lead { max-width: 620px; }
+      .terminal { max-width: 560px; }
+      .diagram-svg { min-width: 700px; }
+      .dd-points { grid-template-columns: repeat(3, 1fr); }
+      .tl-step { grid-template-columns: 52px 1fr; gap: 16px 20px; align-items: start; }
+      .codeblock { grid-column: 2; }
+      .tl-num::after { display: none; }
+      .topo-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 0 20px; }
+      .section { padding: 72px 0; }
+      .section-head { margin-bottom: 38px; }
+      .hero h1 { font-size: clamp(2.1rem, 8.4vw, 2.8rem); }
+      .br-desktop { display: none; }
+      .install-pill { display: none; }
+      .header-inner { gap: 12px; }
+      .brand-name { font-size: 14px; }
+      .version-chip { display: none; }
+      .header-actions { margin-left: auto; }
+      .hero-facts { margin-top: 28px; font-size: 10px; }
+      .hero-facts span + span::before { margin: 0 10px; }
+      .terminal-body { font-size: 10.5px; padding: 22px 16px; }
+      .compat-inner { gap: 14px; }
+      .compat-list { gap: 12px; font-size: 12px; }
+      .compat-list span { gap: 12px; }
+      .diagram-svg { min-width: 720px; }
+      .diagram-hint { display: block; padding: 0 18px 12px; font-family: var(--mono); font-size: 9.5px; color: var(--fg-3); }
+      .dd-head { flex-wrap: wrap; gap: 10px; padding: 18px; }
+      .dd-tag { margin-left: 0; }
+      .dd-points { grid-template-columns: 1fr; }
+      .dd-points li { border-right: 0; border-bottom: 1px solid var(--line); padding: 16px 18px; }
+      .dd-points li:last-child { border-bottom: 0; }
+      .segmented { width: 100%; overflow-x: auto; }
+      .flow-label { display: none; }
+      .console { flex-direction: column; align-items: flex-start; }
+      .console-side { text-align: left; }
+      .row { grid-template-columns: 1fr; gap: 14px; }
+      .row-icon { margin-bottom: 2px; }
+      .proof { grid-column: 1; }
+      .tl-step { grid-template-columns: 1fr; gap: 10px; }
+      .codeblock { grid-column: 1; }
+      .tl-num { font-size: 20px; }
+      .topo-card { padding: 22px; }
+      .qs-panel { padding: 48px 20px 44px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-brand-500 selection:text-black bg-grid relative overflow-x-hidden">
+<body>
 
-  <!-- Ambient Light -->
-  <div class="fixed inset-0 hero-glow pointer-events-none -z-10"></div>
-
-  <!-- Header -->
-  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[#07090e]/85 border-b border-white/5">
-    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
-      
-      <!-- Brand -->
-      <a href="#" class="flex items-center space-x-2.5 group">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-300 flex items-center justify-center text-black font-black text-base shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
-          🪄
-        </div>
-        <div class="flex items-center space-x-1.5">
-          <span class="font-bold text-base tracking-tight text-white">Agent Baton</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 font-mono border border-brand-500/20">v1.0</span>
-        </div>
+  <!-- ══ Header ══════════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#top" class="brand" aria-label="Agent Baton 首页">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 19.5 16 8"/><path d="M11.5 8H16v4.5"/><circle cx="4.6" cy="19.4" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </span>
+        <span><span class="brand-name">Agent Baton</span><span class="version-chip">v2.16</span></span>
       </a>
 
-      <!-- Quick Actions -->
-      <div class="flex items-center space-x-3">
-        <!-- Install Command Pill -->
-        <button id="copy-btn" class="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-300 hover:text-white transition-all" title="点击复制安装命令">
-          <span class="text-brand-400 font-bold">$</span>
-          <span>npm i -g agent-baton</span>
-          <span id="copy-icon" class="text-slate-400 pl-1 text-[11px]">📋</span>
-        </button>
+      <nav class="nav" aria-label="页面导航">
+        <a href="#architecture" data-i18n="nav-1">运行原理</a>
+        <a href="#defenses" data-i18n="nav-2">契约防线</a>
+        <a href="#workflow" data-i18n="nav-3">工作流</a>
+        <a href="#topology" data-i18n="nav-4">部署拓扑</a>
+        <a href="#quickstart" data-i18n="nav-5">快速起步</a>
+      </nav>
 
-        <!-- Language Switcher -->
-        <button id="lang-btn" class="px-2.5 py-1 text-xs font-medium rounded-lg border border-white/10 hover:border-brand-500/40 bg-white/5 hover:bg-white/10 text-slate-200 transition-all flex items-center space-x-1">
-          <span>🌐</span>
-          <span id="lang-text">English</span>
+      <div class="header-actions">
+        <button class="install-pill" data-copy="npm install -g agent-baton" title="点击复制安装命令">
+          <span class="prompt">$</span><span>npm i -g agent-baton</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg>
         </button>
-
-        <!-- GitHub Link -->
-        <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors">
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        <button id="lang-btn" class="lang-btn" aria-label="切换语言"><span id="lang-text">English</span></button>
+        <a class="icon-btn" href="https://github.com/ChurzeXo/agent-baton" target="_blank" rel="noopener" aria-label="GitHub 源码">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
         </a>
       </div>
     </div>
   </header>
 
-  <main class="flex-grow">
-    
-    <!-- ★ 首屏超级焦点：紧凑标题 + 首屏全景动态流程图 ★ -->
-    <section class="pt-8 pb-12 px-4 sm:px-6 max-w-6xl mx-auto">
-      
-      <!-- Top Compact Headline -->
-      <div class="text-center max-w-3xl mx-auto mb-8">
-        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-400 text-xs font-semibold mb-3">
-          <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-          <span data-i18n="tag-hero">实证驱动 · 零耗能状态探针</span>
+  <main id="top">
+
+    <!-- ══ Hero ════════════════════════════════════════════════ -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <div class="hero-tag"><span class="dot"></span><span data-i18n="tag-hero">跨仓 / 同仓多智能体交割 · API-like Handoff Protocol</span></div>
+          <h1 data-i18n="h1-hero">让 Agent 交接，<br class="br-desktop"><span class="hl">像调 API 一样</span>无损直达</h1>
+          <p class="hero-lead" data-i18n="desc-hero">一条命令穿透仓库边界，契约对齐、双盲审计、事件驱动闭环。拒绝人肉传话与上下文衰减。</p>
+          <div class="hero-cta">
+            <a href="#quickstart" class="btn btn-primary">
+              <span data-i18n="btn-start">快速起步</span>
+              <span class="btn-sub">$ npm i -g agent-baton</span>
+            </a>
+            <a href="https://github.com/ChurzeXo/agent-baton/blob/main/docs/zh-CN/README.md" target="_blank" rel="noopener" class="hero-link">
+              <span data-i18n="btn-docs">查阅开源协议</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+
+          <div class="hero-facts">
+            <span data-i18n="m1"><em>0</em> Token 待机</span>
+            <span data-i18n="m2"><em>4</em> 步闭环</span>
+            <span data-i18n="m3">双盲独立审计</span>
+          </div>
         </div>
 
-        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight mb-3" data-i18n="h1-hero">
-          AI 接力写代码，用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话
-        </h1>
-
-        <p class="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto" data-i18n="desc-hero">
-          必须携带真实 Git 提交与改动文件，空口自称直接拦截。<strong>交接状态探针</strong>静音休眠待机，回执到达毫秒自动唤醒！
-        </p>
-      </div>
-
-      <!-- 首屏核心：全景动态接力流程图 (Dynamic Pipeline Canvas) -->
-      <div class="rounded-2xl border border-white/10 bg-[#0a0d15] p-5 sm:p-7 relative shadow-2xl overflow-hidden">
-        
-        <!-- Canvas Status Header -->
-        <div class="flex flex-wrap items-center justify-between pb-5 mb-6 border-b border-white/5 gap-3">
-          <div class="flex items-center space-x-2.5">
-            <span class="relative flex h-3 w-3">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3 w-3 bg-brand-500"></span>
+        <!-- Visual anchor: protocol trace terminal -->
+        <div class="terminal reveal" aria-label="Baton 协议运行轨迹示例">
+          <div class="terminal-bar">
+            <span class="terminal-path">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M12.5 15H17"/></svg>
+              ~/project · baton protocol trace
             </span>
-            <span class="text-xs font-bold text-white tracking-wide uppercase font-mono" data-i18n="pipeline-title">
-              实时交接流程图 · 动态闭环演示
-            </span>
+            <span class="live-chip">LIVE</span>
           </div>
-
-          <!-- Phase Navigation Indicators -->
-          <div class="flex items-center space-x-2 text-xs">
-            <span class="text-slate-400 text-[11px] font-mono hidden sm:inline" data-i18n="stage-indicator">阶段:</span>
-            <button class="stage-btn px-2.5 py-1 rounded bg-brand-500 text-black font-bold font-mono text-[11px] transition-all" onclick="jumpStage(0)">1. 发起</button>
-            <button class="stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all" onclick="jumpStage(1)">2. 探针休眠</button>
-            <button class="stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all" onclick="jumpStage(2)">3. 真实证据</button>
-            <button class="stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all" onclick="jumpStage(3)">4. 自动唤醒</button>
+          <div class="terminal-body">
+            <div class="tstep">
+              <div class="tstep-num">01</div>
+              <div>
+                <div class="t-cmd"><span class="t-prompt">$</span>baton new audit task "重构认证鉴权"</div>
+                <div class="t-out"><span class="ok">✓</span> contract.md · 验收判据 3 项已落盘</div>
+              </div>
+            </div>
+            <div class="tstep">
+              <div class="tstep-num">02</div>
+              <div>
+                <div class="t-cmd"><span class="t-prompt">$</span>baton forward &lt;ID&gt; --daemon --blind</div>
+                <div class="t-out"><span class="wait">○</span> nonce issued · fs.watch listening · 0 token</div>
+              </div>
+            </div>
+            <div class="tstep">
+              <div class="tstep-num">03</div>
+              <div>
+                <div class="t-cmd"><span class="t-prompt">$</span>baton receipt &lt;ID&gt; --evidence ...</div>
+                <div class="t-out"><span class="ok">✓</span> git cat-file -e a91f3c2 · verified</div>
+              </div>
+            </div>
+            <div class="tstep">
+              <div class="tstep-num">04</div>
+              <div>
+                <div class="t-cmd"><span class="t-prompt">$</span>baton accept &lt;ID&gt;</div>
+                <div class="t-out"><span class="ok">✓</span> CLOSED · author session awakened</div>
+              </div>
+            </div>
+          </div>
+          <div class="terminal-foot">
+            <span>PROTOCOL: API_HANDOFF</span>
+            <span class="state">● 0 TOKEN IDLE</span>
           </div>
         </div>
-
-        <!-- Flow Nodes Grid (首屏横向/网格式节点排布) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-          
-          <!-- Node 1: 发起方 -->
-          <div id="node-0" class="flow-card active-node rounded-xl p-4 flex flex-col justify-between cursor-pointer" onclick="jumpStage(0)">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-mono font-bold text-brand-400">NODE 01</span>
-                <span class="text-base select-none">🤖</span>
-              </div>
-              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n1-title">发起方 Agent</h3>
-              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n1-desc">
-                创建任务单，列明修改要求与测试标准。
-              </p>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-slate-400 flex items-center justify-between">
-              <code>baton new impl ...</code>
-              <span class="text-brand-400 text-[10px]">就绪</span>
-            </div>
-          </div>
-
-          <!-- Node 2: 状态探针 (特色中心高亮) -->
-          <div id="node-1" class="flow-card rounded-xl p-4 flex flex-col justify-between relative overflow-hidden cursor-pointer" onclick="jumpStage(1)">
-            <!-- Pulse Effect inside Probe -->
-            <div id="probe-pulse" class="hidden absolute -right-3 -top-3 w-16 h-16 rounded-full bg-brand-400/20 radar-pulse pointer-events-none"></div>
-
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-mono font-bold text-emerald-400 flex items-center space-x-1">
-                  <span>⚡ 核心探针</span>
-                </span>
-                <span class="text-base select-none">💤</span>
-              </div>
-              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n2-title">交接状态探针</h3>
-              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n2-desc">
-                挂起后台静音监听，0 CPU、0 Token 待机。
-              </p>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-emerald-300 flex items-center justify-between">
-              <code>baton forward --wait</code>
-              <span id="probe-badge" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">待命</span>
-            </div>
-          </div>
-
-          <!-- Node 3: 执行方 & 真实证据 -->
-          <div id="node-2" class="flow-card rounded-xl p-4 flex flex-col justify-between cursor-pointer" onclick="jumpStage(2)">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-mono font-bold text-amber-400">NODE 03</span>
-                <span class="text-base select-none">🛠️</span>
-              </div>
-              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n3-title">接收方 & 真实证据</h3>
-              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n3-desc">
-                施工改代码，必须附带 Git Commit 与变动文件。
-              </p>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-slate-400 flex items-center justify-between">
-              <code>baton receipt --evidence</code>
-              <span class="text-amber-300 text-[10px]">核验</span>
-            </div>
-          </div>
-
-          <!-- Node 4: 探针唤醒与闭环 -->
-          <div id="node-3" class="flow-card rounded-xl p-4 flex flex-col justify-between cursor-pointer" onclick="jumpStage(3)">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-mono font-bold text-cyan-400">NODE 04</span>
-                <span class="text-base select-none">🎉</span>
-              </div>
-              <h3 class="text-sm font-bold text-white mb-1" data-i18n="n4-title">探针唤醒 · 自动闭环</h3>
-              <p class="text-[11px] text-slate-400 leading-relaxed" data-i18n="n4-desc">
-                回执到达秒级唤醒原会话，复核无误合入完成。
-              </p>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-white/5 font-mono text-[10px] text-slate-400 flex items-center justify-between">
-              <code>baton accept &lt;ID&gt;</code>
-              <span class="text-cyan-300 text-[10px]">闭环</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Dynamic Live Interactive Log Screen (下方联动展示动态终端日志) -->
-        <div class="mt-5 rounded-xl bg-black/70 border border-white/5 p-4 font-mono text-xs text-slate-300 min-h-[92px] flex items-center justify-between gap-4">
-          <div class="flex items-start space-x-3 overflow-x-auto">
-            <span class="text-brand-400 font-bold select-none text-sm leading-none pt-0.5">&gt;</span>
-            <div id="flow-log" class="leading-relaxed">
-              <!-- Log injected by JS -->
-            </div>
-          </div>
-          <div class="hidden sm:flex flex-col items-end text-[10px] text-slate-500 font-mono shrink-0">
-            <span>EVENT_BUS: fs.watch</span>
-            <span id="probe-metric" class="text-brand-400 font-bold">READY</span>
-          </div>
-        </div>
-
       </div>
     </section>
 
-    <!-- 普通人也能懂的三大改变 -->
-    <section class="py-12 px-6 max-w-5xl mx-auto border-t border-white/5">
-      <div class="text-center mb-10">
-        <h2 class="text-xl sm:text-2xl font-extrabold text-white mb-2" data-i18n="diff-title">
-          为什么不用传统对话，而要用 Baton 接力？
-        </h2>
-        <p class="text-xs sm:text-sm text-slate-400" data-i18n="diff-desc">解决多 AI 编程协作中最常踩的 3 大坑</p>
+    <!-- ══ Compatibility strip ═════════════════════════════════ -->
+    <div class="compat">
+      <div class="container compat-inner">
+        <span class="compat-label" data-i18n="compat-label">WORKS WITH</span>
+        <div class="compat-list">
+          <span>Claude Code</span><span>Cursor</span><span>Codex</span><span>Gemini</span>
+          <span data-i18n="compat-extra">任意本地多 Agent 会话</span>
+        </div>
       </div>
+    </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        
-        <!-- Feature 1 -->
-        <div class="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
-          <div class="text-2xl mb-2.5">🛡️</div>
-          <h3 class="font-bold text-white text-sm mb-1.5" data-i18n="c1-h">杜绝假装改完</h3>
-          <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c1-p">
-            以前 AI 经常说“已经改好”，实际根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。
-          </p>
+    <!-- ══ 01 Architecture / Pipeline ══════════════════════════ -->
+    <section class="section" id="architecture">
+      <div class="container">
+        <div class="pipeline-head reveal">
+          <div class="section-head" style="margin-bottom:0">
+            <span class="eyebrow">01 / Architecture</span>
+            <h2 data-i18n="arch-title">一条协议链路，四个可验证阶段</h2>
+            <p data-i18n="diagram-title">THE INTERNALS OF AGENT BATON · 运行态全景图。从契约声明到实证回执，每一步都有机器可核验的物理边界。</p>
+          </div>
+          <div class="segmented" role="group" aria-label="流程阶段">
+            <span class="flow-label" data-i18n="phase-text">FLOW:</span>
+            <button class="seg-btn is-active" onclick="setDiagramStage(0)">1 REQUEST</button>
+            <button class="seg-btn" onclick="setDiagramStage(1)">2 ASYNC SLEEP</button>
+            <button class="seg-btn" onclick="setDiagramStage(2)">3 RESPONSE</button>
+            <button class="seg-btn" onclick="setDiagramStage(3)">4 CALLBACK</button>
+          </div>
         </div>
 
-        <!-- Feature 2 -->
-        <div class="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
-          <div class="text-2xl mb-2.5">💤</div>
-          <h3 class="font-bold text-white text-sm mb-1.5" data-i18n="c2-h">静默待机不耗电</h3>
-          <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c2-p">
-            不用死循环轮询，笔记本不再发烫。探针启动后 AI 彻底静默，等待期间零 CPU 占用、零 Token 浪费。
-          </p>
+        <div class="diagram reveal">
+          <div class="diagram-bar">
+            <span>PROTOCOL CORE · LIVE FLOW</span>
+            <span class="live">RUNNING</span>
+          </div>
+          <div class="diagram-scroll">
+            <svg id="batondiagram" class="diagram-svg" viewBox="0 0 1080 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agent Baton 协议链路动态架构图">
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker>
+                <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker>
+              </defs>
+
+              <!-- Zones -->
+              <rect class="dz" x="16" y="20" width="1048" height="214" rx="14"/>
+              <text class="dz-label" x="34" y="44">ZONE A · PROTOCOL CORE / API_HANDOFF</text>
+              <rect class="dz" x="16" y="252" width="1048" height="160" rx="14"/>
+              <text class="dz-label" x="34" y="274">ZONE B · EVIDENCE GATE / ZERO-TRUST</text>
+              <g class="dplus">
+                <path d="M1046 38 h9 M1050.5 33.5 v9"/>
+                <path d="M1046 400 h9 M1050.5 395.5 v9"/>
+                <path d="M530 60 h9 M534.5 55.5 v9"/>
+                <path d="M34 240 h9 M38.5 235.5 v9"/>
+              </g>
+
+              <!-- Directed edges (drawn beneath nodes) -->
+              <path id="de0" class="dedge" d="M250 138 H300" marker-end="url(#arrow)"/>
+              <path id="de1" class="dedge dedge--wait" d="M510 138 H560" marker-end="url(#arrow)"/>
+              <path id="de2" class="dedge" d="M770 138 V250 H795 V268" marker-end="url(#arrow)"/>
+              <path id="de3" class="dedge" d="M853 320 H925 V186" marker-end="url(#arrow)"/>
+              <path id="dereject" class="dedge dedge--reject" d="M737 320 H665 V186" marker-end="url(#arrow-amber)"/>
+              <path id="dewake" class="dedge dedge--wait" d="M925 90 V62 H405 V90" marker-end="url(#arrow)"/>
+
+              <text class="edge-label edge-label--accent" x="934" y="300">YES · PASS</text>
+              <text class="edge-label edge-label--amber" x="600" y="300">NO · REJECT</text>
+              <text class="edge-label edge-label--accent" x="665" y="55" text-anchor="middle">CALLBACK WAKEUP · fs.watch · 0 TOKEN</text>
+
+              <!-- Evidence gate (diamond) -->
+              <path id="dgate" class="dgate" d="M795 268 L853 320 L795 372 L737 320 Z"/>
+              <text class="dgate-t" x="795" y="316">EVIDENCE?</text>
+              <text class="dgate-s" x="795" y="333">git cat-file -e</text>
+
+              <!-- Stage nodes -->
+              <g class="dnode is-active" id="dn0" data-stage="0">
+                <rect class="dn-halo" x="40" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-box" x="40" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-bar" x="58" y="92" width="174" height="2"/>
+                <text class="dn-num" x="58" y="114">01 / REQUEST</text>
+                <text class="dn-title" x="58" y="140">CALLER LANE</text>
+                <text class="dn-desc" x="58" y="162">POST /handoffs/new</text>
+              </g>
+              <g class="dnode" id="dn1" data-stage="1">
+                <rect class="dn-halo" x="300" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-box" x="300" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-bar" x="318" y="92" width="174" height="2"/>
+                <text class="dn-num" x="318" y="114">02 / ASYNC SLEEP</text>
+                <text class="dn-title" x="318" y="140">ZERO-TRUST GATEWAY</text>
+                <text class="dn-desc" x="318" y="162">fs.watch · 0 Token</text>
+              </g>
+              <g class="dnode" id="dn2" data-stage="2">
+                <rect class="dn-halo" x="560" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-box" x="560" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-bar" x="578" y="92" width="174" height="2"/>
+                <text class="dn-num" x="578" y="114">03 / RESPONSE</text>
+                <text class="dn-title" x="578" y="140">WORKER LANE</text>
+                <text class="dn-desc" x="578" y="162">git commit · SHA</text>
+              </g>
+              <g class="dnode" id="dn3" data-stage="3">
+                <rect class="dn-halo" x="820" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-box" x="820" y="90" width="210" height="96" rx="10"/>
+                <rect class="dn-bar" x="838" y="92" width="174" height="2"/>
+                <text class="dn-num" x="838" y="114">04 / CALLBACK</text>
+                <text class="dn-title" x="838" y="140">CLOSED &amp; VERIFIED</text>
+                <text class="dn-desc" x="838" y="162">200 OK · Closed</text>
+              </g>
+
+              <!-- Flowing packets -->
+              <g><circle class="dpulse--soft" r="8"/><circle class="dpulse" r="3.2"/><animateMotion dur="1.4s" repeatCount="indefinite" path="M250 138 H300"/></g>
+              <g><circle class="dpulse--soft" r="8"/><circle class="dpulse" r="3.2"/><animateMotion dur="1.6s" repeatCount="indefinite" path="M510 138 H560"/></g>
+              <g><circle class="dpulse--soft" r="8"/><circle class="dpulse" r="3.2"/><animateMotion dur="2.6s" repeatCount="indefinite" path="M770 138 V250 H795 V268"/></g>
+              <g><circle class="dpulse--soft" r="8"/><circle class="dpulse" r="3.2"/><animateMotion dur="2.8s" repeatCount="indefinite" path="M853 320 H925 V186"/></g>
+              <g><circle class="dpulse--soft" r="8"/><circle class="dpulse" r="3.2"/><animateMotion dur="4.5s" repeatCount="indefinite" path="M925 90 V62 H405 V90"/></g>
+            </svg>
+          </div>
+          <p class="diagram-hint" data-i18n="diagram-hint">← 左右滑动查看完整链路 →</p>
         </div>
 
-        <!-- Feature 3 -->
-        <div class="p-5 rounded-xl bg-white/5 border border-white/10 hover:border-brand-500/30 transition-all">
-          <div class="text-2xl mb-2.5">⚡</div>
-          <h3 class="font-bold text-white text-sm mb-1.5" data-i18n="c3-h">自动唤醒不用人肉搬运</h3>
-          <p class="text-xs text-slate-400 leading-relaxed" data-i18n="c3-p">
-            接收方写完回执的一瞬间，发起方自动被唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。
-          </p>
+        <div class="dd-wrap reveal">
+          <div class="dd-panel is-active" id="arch-caller">
+            <div class="dd-head">
+              <span class="dd-num">01</span>
+              <div><h3 class="dd-title">CALLER LANE</h3><p class="dd-sub" data-i18n="st1-t">发起端 · 契约声明</p></div>
+              <span class="dd-tag">POST /handoffs/new</span>
+            </div>
+            <ul class="dd-points">
+              <li><div class="pt-title" data-i18n="spec-title">Task Specification</div><div class="pt-desc" data-i18n="spec-desc">定义客观机器判据与修改边界，拒绝模糊自然语言</div></li>
+              <li><div class="pt-title">baton new &lt;lane&gt; &lt;type&gt;</div><div class="pt-desc" data-i18n="ticket-desc">自动落盘 Markdown 票据，注入前后置事实源</div></li>
+              <li><div class="pt-title">Double-Blind (--blind)</div><div class="pt-desc" data-i18n="blind-desc">物理脱敏 &lt;thinking&gt; 思维链，杜绝顺从偏见</div></li>
+            </ul>
+          </div>
+
+          <div class="dd-panel" id="arch-gateway">
+            <div class="dd-head">
+              <span class="dd-num">02</span>
+              <div><h3 class="dd-title">ZERO-TRUST GATEWAY</h3><p class="dd-sub" data-i18n="st2-t">零信任网关与事件中枢</p></div>
+              <span class="dd-tag">OS fs.watch · 0-Token Sleeping</span>
+            </div>
+            <ul class="dd-points">
+              <li><div class="pt-title">Audit Nonce</div><div class="pt-desc" data-i18n="nonce-desc">派单时签发高熵一次性随机令牌，强制审计回执核销，拦截同一会话自导自演自签。</div></li>
+              <li><div class="pt-title">0-Token 探针</div><div class="pt-desc" data-i18n="sleeper-desc"><code>baton forward --wait</code> 挂载内核文件事件，发起端静默休眠，零 Token 消耗零发热。</div></li>
+              <li><div class="pt-title">Evidence 判据菱形</div><div class="pt-desc" data-i18n="gate-desc">运行 <code>git cat-file -e</code> 核验真实 Commit SHA 与变动文件；虚假回执直接硬拦截拒收！</div></li>
+            </ul>
+          </div>
+
+          <div class="dd-panel" id="arch-worker">
+            <div class="dd-head">
+              <span class="dd-num">03</span>
+              <div><h3 class="dd-title">WORKER LANE</h3><p class="dd-sub" data-i18n="st3-t">执行工作台 · 独立实测</p></div>
+              <span class="dd-tag">Work Queue</span>
+            </div>
+            <ul class="dd-points">
+              <li><div class="pt-title" data-i18n="w1-t">直取角色待办</div><div class="pt-desc" data-i18n="w1-d">过滤并认领归属当前 Lane 的任务单 <code>baton status --for</code></div></li>
+              <li><div class="pt-title" data-i18n="w2-t">终端独立实测</div><div class="pt-desc" data-i18n="w2-d">严禁信口开河自报，以终端命令运行结果为准</div></li>
+              <li><div class="pt-title" data-i18n="w3-t">提交代码生成 SHA</div><div class="pt-desc" data-i18n="w3-d">产生不可伪造的真实 Git Commit</div></li>
+            </ul>
+          </div>
+
+          <div class="dd-panel" id="arch-deliver">
+            <div class="dd-head">
+              <span class="dd-num">04</span>
+              <div><h3 class="dd-title">CLOSED &amp; VERIFIED</h3><p class="dd-sub" data-i18n="st4-t">无损交付闭环</p></div>
+              <span class="dd-tag">200 OK Callback</span>
+            </div>
+            <ul class="dd-points">
+              <li><div class="pt-title" data-i18n="d1-t">真实证据回执单</div><div class="pt-desc" data-i18n="d1-d">附带 Commit、变更文件路径与 Audit Nonce</div></li>
+              <li><div class="pt-title" data-i18n="d2-t">毫秒响应式自动唤醒</div><div class="pt-desc" data-i18n="d2-d">底层探测回执就绪，发起方会话自动苏醒</div></li>
+              <li><div class="pt-title" data-i18n="d3-t">一键复核合入</div><div class="pt-desc" data-i18n="d3-d">核对验收标准，状态翻转为 Closed 归档</div></li>
+            </ul>
+          </div>
         </div>
 
+        <div class="console reveal">
+          <div class="console-main">
+            <span class="console-caret">&gt;</span>
+            <div id="flow-log"></div>
+          </div>
+          <div class="console-side">
+            <span>PROTOCOL: API_HANDOFF</span>
+            <span id="probe-metric">READY</span>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- 极简上手：30秒看懂命令 -->
-    <section class="py-12 px-6 max-w-4xl mx-auto border-t border-white/5">
-      <div class="text-center mb-8">
-        <h2 class="text-xl sm:text-2xl font-extrabold text-white mb-2" data-i18n="qs-title">
-          日常使用只有 4 步
-        </h2>
-        <p class="text-xs text-slate-400" data-i18n="qs-desc">简单好记，不需要死记硬背复杂配置</p>
+    <!-- ══ 02 Defenses ═════════════════════════════════════════ -->
+    <section class="section" id="defenses">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">02 / Why a protocol</span>
+          <h2 data-i18n="diff-title">拒绝人肉传话！为什么多 Agent 协同必须像调 API？</h2>
+          <p data-i18n="diff-desc">单兵写代码容易，多智能体协同极难。传统聊天式多 Agent 系统在生产中频频崩溃的 4 大死穴与 Baton 工业防线：</p>
+        </div>
+
+        <div class="rows reveal">
+          <div class="row">
+            <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4v16h18"/><path d="m6 8 4 5 3-2 5 7"/><circle cx="18" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg></div>
+            <div>
+              <h3 data-i18n="p1-h">拒绝上下文衰减与传话失真</h3>
+              <p data-i18n="p1-p">人工在窗口间复制粘贴 Prompt，不仅繁琐，更会导致信息漏损、思维链污染及顺从偏见（Sycophancy）。Baton 以<strong>单一事实源 Markdown 契约</strong>穿透单体或微服务边界，无损直达。</p>
+            </div>
+            <div class="proof" data-i18n="pf1">✓ 规范单一源 · 阻断思维链污染</div>
+          </div>
+
+          <div class="row">
+            <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 5.5v6.2c0 5.1-3.4 8.3-8 9.8-4.6-1.5-8-4.7-8-9.8V5.5z"/><path d="m9.3 11.8 5.4 5.4m0-5.4-5.4 5.4"/></svg></div>
+            <div>
+              <h3 data-i18n="p2-h">杜绝假装改完与幻觉回执</h3>
+              <p data-i18n="p2-p">传统框架经常采信 Agent 的自报（“我已测试通过”），实则根本没改文件。Baton 建立<strong>实证主义物理门禁</strong>，强制核验磁盘真实修改与 <code>git cat-file -e</code> 提交，无证据直接拒收。</p>
+            </div>
+            <div class="proof amber" data-i18n="pf2">✓ git cat-file -e · 物理级实据拦截</div>
+          </div>
+
+          <div class="row">
+            <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="6.2"/><circle cx="15" cy="12" r="6.2"/><path d="M3.5 20.5 20.5 3.5"/></svg></div>
+            <div>
+              <h3 data-i18n="p3-h">杜绝同一主体自审自签</h3>
+              <p data-i18n="p3-p">同一个会话自封审计角色，自己给自己盖章通过？Baton 在派发审查时动态签发<strong>一次性密码学挑战令牌 (Audit Nonce)</strong>，回执必须核销 Nonce，硬性阻断本地会话自签漏洞。</p>
+            </div>
+            <div class="proof" data-i18n="pf3">✓ Audit Nonce · 防自导自演自签</div>
+          </div>
+
+          <div class="row">
+            <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v9.5"/><path d="M6.6 6.2a8 8 0 1 0 10.8 0"/></svg></div>
+            <div>
+              <h3 data-i18n="p4-h">事件驱动待机，告别发烫与 Token 浪费</h3>
+              <p data-i18n="p4-p">不用跑 while 轮询耗尽上下文。<code>baton forward --daemon</code> 借助操作系统内核级 <code>fs.watch</code> 事件总线，等待期间 <strong>0 CPU、0 Token 开销</strong>，回执到达秒级自动唤醒。</p>
+            </div>
+            <div class="proof" data-i18n="pf4">✓ 0-Token 睡眠 · 内核级毫秒唤醒</div>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="space-y-3 font-mono text-xs">
-        
-        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div class="flex items-center space-x-3">
-            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">1</span>
-            <div>
-              <span class="font-bold text-white font-sans text-xs" data-i18n="q1-t">创建任务单</span>
-              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q1-d">明确任务目标与验收判据</span>
-            </div>
-          </div>
-          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
-            baton new impl task "重构认证模块"
-          </code>
+    <!-- ══ 03 Workflow ═════════════════════════════════════════ -->
+    <section class="section" id="workflow">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">03 / Workflow</span>
+          <h2 data-i18n="qs-title">日常使用：像调用 API 一样极简的 4 个动作</h2>
+          <p data-i18n="qs-desc">Request → Async Sleep → Response → Callback，自然流畅</p>
         </div>
 
-        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div class="flex items-center space-x-3">
-            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">2</span>
-            <div>
-              <span class="font-bold text-white font-sans text-xs" data-i18n="q2-t">转递并启动探针</span>
-              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q2-d">生成提示词，发起方自动静音待机</span>
+        <div class="timeline reveal">
+          <div class="tl-step">
+            <div class="tl-num">01</div>
+            <div><h3 class="tl-title" data-i18n="step1-t">发起调用 (POST /request)</h3><p class="tl-desc" data-i18n="step1-d">明确声明目标角色与机器验收判据</p></div>
+            <div class="codeblock">
+              <div class="codeblock-bar"><span class="codeblock-lang">SHELL</span><button class="copy-btn" data-copy='baton new audit task "重构鉴权模块并补充单元测试"'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+              <pre>baton new audit task "重构鉴权模块并补充单元测试"</pre>
             </div>
           </div>
-          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
-            baton forward &lt;ID&gt; --wait
-          </code>
-        </div>
 
-        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div class="flex items-center space-x-3">
-            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">3</span>
-            <div>
-              <span class="font-bold text-white font-sans text-xs" data-i18n="q3-t">接收方提交真实证据</span>
-              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q3-d">必须附带 Git Commit 与变动文件</span>
+          <div class="tl-step">
+            <div class="tl-num">02</div>
+            <div><h3 class="tl-title" data-i18n="step2-t">异步挂起待机 (Async Sleep)</h3><p class="tl-desc" data-i18n="step2-d">双盲脱敏思维链，签发 Nonce，0 Token 待机</p></div>
+            <div class="codeblock">
+              <div class="codeblock-bar"><span class="codeblock-lang">SHELL</span><button class="copy-btn" data-copy="baton forward <ID> --daemon --blind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+              <pre>baton forward &lt;ID&gt; --daemon --blind</pre>
             </div>
           </div>
-          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
-            baton receipt &lt;ID&gt; --evidence-paths "..."
-          </code>
-        </div>
 
-        <div class="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div class="flex items-center space-x-3">
-            <span class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 text-xs font-bold flex items-center justify-center font-sans">4</span>
-            <div>
-              <span class="font-bold text-white font-sans text-xs" data-i18n="q4-t">自动唤醒闭环</span>
-              <span class="text-slate-400 font-sans text-xs pl-2" data-i18n="q4-d">发起方自动苏醒，确认改动合入</span>
+          <div class="tl-step">
+            <div class="tl-num">03</div>
+            <div><h3 class="tl-title" data-i18n="step3-t">提交实证回执 (200 OK + Proof)</h3><p class="tl-desc" data-i18n="step3-d">审查方独立实测，附带 Git 提交物理证据</p></div>
+            <div class="codeblock">
+              <div class="codeblock-bar"><span class="codeblock-lang">SHELL</span><button class="copy-btn" data-copy='baton receipt <ID> --evidence-paths "..." --audit-nonce "..."'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+              <pre>baton receipt &lt;ID&gt; --evidence-paths "..." --audit-nonce "..."</pre>
             </div>
           </div>
-          <code class="px-2.5 py-1 rounded bg-black/60 text-brand-300 border border-white/5 select-all">
-            baton accept &lt;ID&gt; -n "验收通过"
-          </code>
+
+          <div class="tl-step">
+            <div class="tl-num">04</div>
+            <div><h3 class="tl-title" data-i18n="step4-t">事件回调自动唤醒 (Callback Wakeup)</h3><p class="tl-desc" data-i18n="step4-d">发起方秒级苏醒，验收合入归档</p></div>
+            <div class="codeblock">
+              <div class="codeblock-bar"><span class="codeblock-lang">SHELL</span><button class="copy-btn" data-copy='baton accept <ID> -n "全量实测通过，闭环合入"'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+              <pre>baton accept &lt;ID&gt; -n "全量实测通过，闭环合入"</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ 04 Topology ═════════════════════════════════════════ -->
+    <section class="section" id="topology">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">04 / Topology</span>
+          <h2 data-i18n="topo-title">全场景灵活拓扑：仓内职责制衡 &amp; 跨微服务中枢</h2>
+          <p data-i18n="topo-desc">无论单个代码仓库还是庞大多微服务集群，一条命令完成脚手架初始化</p>
         </div>
 
+        <div class="topo-grid reveal">
+          <article class="topo-card">
+            <div class="topo-mode">MODE 01 · INTRA-REPO</div>
+            <h3 data-i18n="tp1-h">单一仓库内以 Lane 隔离角色职责</h3>
+            <p data-i18n="tp1-p">在现有仓库内生成 <code>.handoffs/</code> 子 Hub，实现实现方（impl）、审计方（audit）与架构方（arch）分工制衡。</p>
+            <div class="topo-viz" aria-hidden="true">
+              <svg viewBox="0 0 340 104" xmlns="http://www.w3.org/2000/svg">
+                <path class="tv-wire" d="M170 40 V58 H52 V72 M170 58 V72 M170 58 H288 V72"/>
+                <rect class="tv-node tv-node--hub" x="112" y="10" width="116" height="30" rx="6"/>
+                <text class="tv-text tv-text--hub" x="170" y="29" text-anchor="middle">.handoffs/ hub</text>
+                <rect class="tv-node" x="10" y="72" width="84" height="26" rx="5"/><text class="tv-text" x="52" y="89" text-anchor="middle">impl</text>
+                <rect class="tv-node" x="128" y="72" width="84" height="26" rx="5"/><text class="tv-text" x="170" y="89" text-anchor="middle">audit</text>
+                <rect class="tv-node" x="246" y="72" width="84" height="26" rx="5"/><text class="tv-text" x="288" y="89" text-anchor="middle">arch</text>
+              </svg>
+            </div>
+            <div class="codeblock">
+              <div class="codeblock-bar"><span class="codeblock-lang">SHELL</span><button class="copy-btn" data-copy="baton init --lanes impl,audit,arch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+              <pre>baton init --lanes impl,audit,arch</pre>
+            </div>
+          </article>
+
+          <article class="topo-card">
+            <div class="topo-mode">MODE 02 · CROSS-REPO HUB</div>
+            <h3 data-i18n="tp2-h">中立中心调度统筹多个独立微服务</h3>
+            <p data-i18n="tp2-p">建立独立中枢 Hub，统一调度 api、web、docs 等不同微服务代码仓库之间的跨仓任务交接。</p>
+            <div class="topo-viz" aria-hidden="true">
+              <svg viewBox="0 0 340 104" xmlns="http://www.w3.org/2000/svg">
+                <path class="tv-wire" d="M52 34 V52 H170 V68 M170 52 V68 M288 34 V52 H170"/>
+                <rect class="tv-node" x="10" y="8" width="84" height="26" rx="5"/><text class="tv-text" x="52" y="25" text-anchor="middle">api</text>
+                <rect class="tv-node" x="128" y="8" width="84" height="26" rx="5"/><text class="tv-text" x="170" y="25" text-anchor="middle">web</text>
+                <rect class="tv-node" x="246" y="8" width="84" height="26" rx="5"/><text class="tv-text" x="288" y="25" text-anchor="middle">docs</text>
+                <rect class="tv-node tv-node--hub" x="112" y="68" width="116" height="30" rx="6"/>
+                <text class="tv-text tv-text--hub" x="170" y="87" text-anchor="middle">baton hub</text>
+              </svg>
+            </div>
+            <div class="codeblock">
+              <div class="codeblock-bar"><span class="codeblock-lang">SHELL</span><button class="copy-btn" data-copy="baton init --cross --targets api,web,docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+              <pre>baton init --cross --targets api,web,docs</pre>
+            </div>
+          </article>
+        </div>
+
+        <div class="topo-note reveal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="width:17px;height:17px;color:var(--accent);flex-shrink:0"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 2 5-6"/></svg>
+          <span data-i18n="tp-note">支持 <code>baton status --mermaid</code> 一键输出实时任务拓扑流向图。</span>
+          <span class="mono-label">PURE CONFIG · ZERO-HARDCODE</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ 05 Quickstart ═══════════════════════════════════════ -->
+    <section class="quickstart" id="quickstart">
+      <div class="container">
+        <div class="qs-panel reveal">
+          <span class="eyebrow">05 / Get started</span>
+          <h2 data-i18n="cta-title">立即让你的 AI Coding Agent 拥有工业级交付纪律</h2>
+          <p data-i18n="cta-desc">纯 Node.js 原生零依赖，支持 Claude Code、Cursor、Codex、Gemini 与任意本地多 Agent 会话。</p>
+
+          <div class="qs-install">
+            <div class="qs-comment" data-i18n="qsn1"># 1. 全局安装</div>
+            <div class="qs-line"><span>npm install -g agent-baton</span><button class="copy-btn" data-copy="npm install -g agent-baton"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+            <div class="qs-comment" data-i18n="qsn2"># 2. 注册 CLI 快捷软链接 (baton / handoff)</div>
+            <div class="qs-line"><span>baton link</span><button class="copy-btn" data-copy="baton link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15"/></svg><span>复制</span></button></div>
+          </div>
+
+          <div class="qs-cta">
+            <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" rel="noopener" class="btn btn-primary"><span data-i18n="qscta1">查看 GitHub 源码</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <a href="https://github.com/ChurzeXo/agent-baton/blob/main/docs/zh-CN/README.md" target="_blank" rel="noopener" class="btn btn-ghost"><span data-i18n="qscta2">阅读中文文档</span></a>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Footer -->
-  <footer class="py-8 border-t border-white/5 bg-[#07090e] text-xs text-slate-500">
-    <div class="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="flex items-center space-x-2">
-        <span class="font-bold text-slate-300">Agent Baton</span>
-        <span>— 让 AI 协作真实靠谱</span>
+  <!-- ══ Footer ══════════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand"><strong>Agent Baton</strong><span data-i18n="ft-desc">— 跨仓/同仓 Agent 任务交割像调 API 一样无损直达</span></div>
+        <div class="footer-links">
+          <a href="https://github.com/ChurzeXo/agent-baton" target="_blank" rel="noopener">GitHub 源码</a>
+          <a href="https://github.com/ChurzeXo/agent-baton/blob/main/docs/zh-CN/README.md" target="_blank" rel="noopener">中文说明</a>
+          <a href="https://github.com/ChurzeXo/agent-baton/blob/main/COMMANDS.md" target="_blank" rel="noopener">完整命令手册</a>
+          <a href="https://github.com/ChurzeXo/agent-baton/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
       </div>
-      <div class="flex items-center space-x-5 text-slate-400">
-        <a href="https://github.com/ChurzeXo/agent-baton" class="hover:text-white transition-colors">GitHub 源码</a>
-        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/docs/zh-CN/README.md" class="hover:text-white transition-colors">中文说明</a>
-        <a href="https://github.com/ChurzeXo/agent-baton/blob/main/COMMANDS.md" class="hover:text-white transition-colors">完整命令手册</a>
+      <div class="footer-bottom">
+        <span>AGENT BATON · API-LIKE HANDOFF PROTOCOL v2.16</span>
+        <span>BUILT FOR MULTI-AGENT ENGINEERING</span>
       </div>
     </div>
   </footer>
 
-  <!-- Live Dynamic Pipeline Choreography Logic -->
+  <!-- ══ Scripts ═════════════════════════════════════════════ -->
   <script>
-    let currentStage = 0;
-    let timer = null;
+    /* ── i18n (declared before any consumer to avoid TDZ) ───────── */
+    let isZh = true;
 
-    const stagesData = [
+    const i18n = {
+      zh: {
+        'nav-1': '运行原理', 'nav-2': '契约防线', 'nav-3': '工作流', 'nav-4': '部署拓扑', 'nav-5': '快速起步',
+        'btn-start': '快速起步', 'btn-docs': '查阅开源协议',
+        'm1': '<em>0</em> Token 待机', 'm2': '<em>4</em> 步闭环', 'm3': '双盲独立审计',
+        'compat-label': 'WORKS WITH', 'compat-extra': '任意本地多 Agent 会话',
+        'tag-hero': '跨仓 / 同仓多智能体交割 · API-like Handoff Protocol',
+        'h1-hero': '让 Agent 交接，<br class="br-desktop"><span class="hl">像调 API 一样</span>无损直达',
+        'desc-hero': '一条命令穿透仓库边界，契约对齐、双盲审计、事件驱动闭环。拒绝人肉传话与上下文衰减。',
+        'arch-title': '一条协议链路，四个可验证阶段',
+        'diagram-title': 'THE INTERNALS OF AGENT BATON · 运行态全景图。从契约声明到实证回执，每一步都有机器可核验的物理边界。',
+        'phase-text': 'FLOW:',
+        'diagram-hint': '← 左右滑动查看完整链路 →',
+        'st1-t': '发起端 · 契约声明', 'st2-t': '零信任网关与事件中枢', 'st3-t': '执行工作台 · 独立实测', 'st4-t': '无损交付闭环',
+        'spec-title': 'Task Specification', 'spec-desc': '定义客观机器判据与修改边界，拒绝模糊自然语言',
+        'ticket-desc': '自动落盘 Markdown 票据，注入前后置事实源',
+        'blind-desc': '物理脱敏 &lt;thinking&gt; 思维链，杜绝顺从偏见',
+        'nonce-desc': '派单时签发高熵一次性随机令牌，强制审计回执核销，拦截同一会话自导自演自签。',
+        'sleeper-desc': '<code>baton forward --wait</code> 挂载内核文件事件，发起端静默休眠，零 Token 消耗零发热。',
+        'gate-desc': '运行 <code>git cat-file -e</code> 核验真实 Commit SHA 与变动文件；虚假回执直接硬拦截拒收！',
+        'w1-t': '直取角色待办', 'w1-d': '过滤并认领归属当前 Lane 的任务单 <code>baton status --for</code>',
+        'w2-t': '终端独立实测', 'w2-d': '严禁信口开河自报，以终端命令运行结果为准',
+        'w3-t': '提交代码生成 SHA', 'w3-d': '产生不可伪造的真实 Git Commit',
+        'd1-t': '真实证据回执单', 'd1-d': '附带 Commit、变更文件路径与 Audit Nonce',
+        'd2-t': '毫秒响应式自动唤醒', 'd2-d': '底层探测回执就绪，发起方会话自动苏醒',
+        'd3-t': '一键复核合入', 'd3-d': '核对验收标准，状态翻转为 Closed 归档',
+        'diff-title': '拒绝人肉传话！为什么多 Agent 协同必须像调 API？',
+        'diff-desc': '单兵写代码容易，多智能体协同极难。传统聊天式多 Agent 系统在生产中频频崩溃的 4 大死穴与 Baton 工业防线：',
+        'p1-h': '拒绝上下文衰减与传话失真',
+        'p1-p': '人工在窗口间复制粘贴 Prompt，不仅繁琐，更会导致信息漏损、思维链污染及顺从偏见（Sycophancy）。Baton 以<strong>单一事实源 Markdown 契约</strong>穿透单体或微服务边界，无损直达。',
+        'pf1': '✓ 规范单一源 · 阻断思维链污染',
+        'p2-h': '杜绝假装改完与幻觉回执',
+        'p2-p': '传统框架经常采信 Agent 的自报（“我已测试通过”），实则根本没改文件。Baton 建立<strong>实证主义物理门禁</strong>，强制核验磁盘真实修改与 <code>git cat-file -e</code> 提交，无证据直接拒收。',
+        'pf2': '✓ git cat-file -e · 物理级实据拦截',
+        'p3-h': '杜绝同一主体自审自签',
+        'p3-p': '同一个会话自封审计角色，自己给自己盖章通过？Baton 在派发审查时动态签发<strong>一次性密码学挑战令牌 (Audit Nonce)</strong>，回执必须核销 Nonce，硬性阻断本地会话自签漏洞。',
+        'pf3': '✓ Audit Nonce · 防自导自演自签',
+        'p4-h': '事件驱动待机，告别发烫与 Token 浪费',
+        'p4-p': '不用跑 while 轮询耗尽上下文。<code>baton forward --daemon</code> 借助操作系统内核级 <code>fs.watch</code> 事件总线，等待期间 <strong>0 CPU、0 Token 开销</strong>，回执到达秒级自动唤醒。',
+        'pf4': '✓ 0-Token 睡眠 · 内核级毫秒唤醒',
+        'qs-title': '日常使用：像调用 API 一样极简的 4 个动作',
+        'qs-desc': 'Request → Async Sleep → Response → Callback，自然流畅',
+        'step1-t': '发起调用 (POST /request)', 'step1-d': '明确声明目标角色与机器验收判据',
+        'step2-t': '异步挂起待机 (Async Sleep)', 'step2-d': '双盲脱敏思维链，签发 Nonce，0 Token 待机',
+        'step3-t': '提交实证回执 (200 OK + Proof)', 'step3-d': '审查方独立实测，附带 Git 提交物理证据',
+        'step4-t': '事件回调自动唤醒 (Callback Wakeup)', 'step4-d': '发起方秒级苏醒，验收合入归档',
+        'topo-title': '全场景灵活拓扑：仓内职责制衡 &amp; 跨微服务中枢',
+        'topo-desc': '无论单个代码仓库还是庞大多微服务集群，一条命令完成脚手架初始化',
+        'tp1-h': '单一仓库内以 Lane 隔离角色职责',
+        'tp1-p': '在现有仓库内生成 <code>.handoffs/</code> 子 Hub，实现实现方（impl）、审计方（audit）与架构方（arch）分工制衡。',
+        'tp2-h': '中立中心调度统筹多个独立微服务',
+        'tp2-p': '建立独立中枢 Hub，统一调度 api、web、docs 等不同微服务代码仓库之间的跨仓任务交接。',
+        'tp-note': '支持 <code>baton status --mermaid</code> 一键输出实时任务拓扑流向图。',
+        'cta-title': '立即让你的 AI Coding Agent 拥有工业级交付纪律',
+        'cta-desc': '纯 Node.js 原生零依赖，支持 Claude Code、Cursor、Codex、Gemini 与任意本地多 Agent 会话。',
+        'qsn1': '# 1. 全局安装', 'qsn2': '# 2. 注册 CLI 快捷软链接 (baton / handoff)',
+        'qscta1': '查看 GitHub 源码', 'qscta2': '阅读中文文档',
+        'ft-desc': '— 跨仓/同仓 Agent 任务交割像调 API 一样无损直达'
+      },
+      en: {
+        'nav-1': 'Architecture', 'nav-2': 'Defenses', 'nav-3': 'Workflow', 'nav-4': 'Topology', 'nav-5': 'Quickstart',
+        'btn-start': 'Quickstart', 'btn-docs': 'Read the protocol',
+        'm1': '<em>0</em> Token idle', 'm2': '<em>4</em>-step closure', 'm3': 'Double-blind audit',
+        'compat-label': 'WORKS WITH', 'compat-extra': 'Any local multi-agent session',
+        'tag-hero': 'Cross / Intra-Repo Multi-Agent Handoff · API-like Protocol',
+        'h1-hero': 'Hand off tasks<br class="br-desktop"><span class="hl">like calling an API.</span>',
+        'desc-hero': 'One command crosses repo boundaries. Aligned contracts, double-blind audits, event-driven closure. No context rot.',
+        'arch-title': 'One protocol chain, four verifiable stages',
+        'diagram-title': 'THE INTERNALS OF AGENT BATON · A runtime overview. From contract declaration to evidence-backed receipts, every step has a machine-verifiable boundary.',
+        'phase-text': 'FLOW:',
+        'diagram-hint': '← Swipe horizontally to explore →',
+        'st1-t': 'Caller lane · contract declaration', 'st2-t': 'Zero-trust gateway & event bus', 'st3-t': 'Worker lane · independent testing', 'st4-t': 'Lossless delivery loop closed',
+        'spec-title': 'Task Specification', 'spec-desc': 'Defines objective acceptance criteria and strict scopes, refusing fuzzy prompts',
+        'ticket-desc': 'Persists markdown contract ticket on disk with single source of truth',
+        'blind-desc': 'Physically strips &lt;thinking&gt; chains to eliminate reviewer sycophancy',
+        'nonce-desc': 'Signs ephemeral cryptographic challenge tokens to block single-session self-signing loopholes.',
+        'sleeper-desc': 'Hooks into OS kernel file events (fs.watch); author sleeps silently at 0 CPU and 0 Token cost.',
+        'gate-desc': 'Runs git cat-file -e to verify tangible Git commit SHAs and paths; hallucinated receipts fail closed!',
+        'w1-t': 'Claim lane-owned tasks', 'w1-d': 'Filter and claim tickets owned by the current lane via <code>baton status --for</code>',
+        'w2-t': 'Test independently in terminal', 'w2-d': 'No self-reported claims; terminal output is the only source of truth',
+        'w3-t': 'Commit and produce a SHA', 'w3-d': 'Generate an unforgeable, real Git commit',
+        'd1-t': 'Evidence-backed receipt', 'd1-d': 'Carries commit SHA, changed paths and the Audit Nonce',
+        'd2-t': 'Millisecond reactive wakeup', 'd2-d': 'Kernel probe detects the receipt and wakes the author session',
+        'd3-t': 'One-command verify & merge', 'd3-d': 'Check acceptance criteria, flip status to Closed',
+        'diff-title': 'Stop Copy-Pasting Prompts! Why Multi-Agent Handoff Must Be Like An API',
+        'diff-desc': 'Writing code alone is easy; agent collaboration is hard. The 4 fatal multi-agent pitfalls and Baton guarantees:',
+        'p1-h': 'Zero Context Rot & Sycophancy',
+        'p1-p': 'Manual copy-pasting leaks context and biases downstream agents. Baton penetrates repository boundaries via <strong>single-source-of-truth contracts</strong>.',
+        'pf1': '✓ Single source · no chain contamination',
+        'p2-h': 'Zero Fake Completions',
+        'p2-p': 'No more trusting self-reported claims. Baton enforces <strong>evidence-first gates</strong>, requiring tangible Git commit SHAs and verified paths on disk.',
+        'pf2': '✓ git cat-file -e · physical proof gate',
+        'p3-h': 'Zero Self-Closing Loopholes',
+        'p3-p': 'Prevents an agent session from self-signing by switching roles. Ephemeral <strong>Audit Nonces</strong> physically block self-approval.',
+        'pf3': '✓ Audit Nonce · no self-approval',
+        'p4-h': 'Zero Token & CPU Waste',
+        'p4-p': 'No busy-polling loops. Baton leverages OS kernel events (<code>fs.watch</code>), sleeping at <strong>0 CPU & 0 Token</strong> and waking up in milliseconds.',
+        'pf4': '✓ 0-Token sleep · kernel wakeup',
+        'qs-title': 'Daily Workflow: 4 Simple API-like Actions',
+        'qs-desc': 'Request → Async Sleep → Response → Callback, perfectly natural',
+        'step1-t': 'Dispatch Request (POST /request)', 'step1-d': 'Define target lane and objective acceptance criteria',
+        'step2-t': 'Async Sleep (0 Token)', 'step2-d': 'Sanitize thinking, issue Nonce, daemonize background',
+        'step3-t': 'Submit Verified Response (200 OK + Proof)', 'step3-d': 'Reviewer tests independently, submits real Git commit',
+        'step4-t': 'Callback Reactive Wakeup', 'step4-d': 'Author wakes up in milliseconds to verify and close',
+        'topo-title': 'Flexible Topologies: Intra-Repo Lanes &amp; Cross-Repo Hub',
+        'topo-desc': 'From single monolithic repos to massive microservice clusters, initialize with one command',
+        'tp1-h': 'Separate role duties with lanes inside one repo',
+        'tp1-p': 'Generate a <code>.handoffs/</code> sub-hub in the existing repo to separate implementation (impl), audit and architecture (arch) duties.',
+        'tp2-h': 'One neutral hub orchestrating independent services',
+        'tp2-p': 'Set up a central hub to dispatch cross-repo handoffs between api, web, docs and other microservice repositories.',
+        'tp-note': 'Run <code>baton status --mermaid</code> to export a live task topology graph.',
+        'cta-title': 'Empower Your AI Agents with Enterprise-Grade Delivery Discipline',
+        'cta-desc': 'Pure zero-dependency Node.js, compatible with Claude Code, Cursor, Codex, Gemini, and any custom agents.',
+        'qsn1': '# 1. Install globally', 'qsn2': '# 2. Register CLI shims (baton / handoff)',
+        'qscta1': 'View on GitHub', 'qscta2': 'Read the docs',
+        'ft-desc': '— Lossless, API-like task handoff between cross/intra-repo agents'
+      }
+    };
+
+    /* ── Interactive pipeline ──────────────────────────────────── */
+    let currentDiagramStage = 0;
+    let diagramTimer = null;
+
+    const diagramStages = [
       {
-        nodeIdx: 0,
-        badgeText: "待命",
-        pulse: false,
-        metric: "INIT_TASK",
-        logZh: `<span class="text-brand-400">baton new impl task "重构认证模块"</span><br><span class="text-slate-400">已生成交接单：audit-20261105-01-task.md，待转递并启动探针。</span>`,
-        logEn: `<span class="text-brand-400">baton new impl task "Refactor Auth Subsystem"</span><br><span class="text-slate-400">Created ticket: audit-20261105-01-task.md, ready to forward & probe.</span>`
+        activeBoxId: 'arch-caller', metric: 'POST /handoffs/new',
+        logZh: `<span class="log-tag">[1. REQUEST 发起]</span> <span class="log-cmd">baton new audit task "重构认证鉴权"</span><br><span class="log-note">已生成结构化交接单，列明客观验收判据与修改边界。</span>`,
+        logEn: `<span class="log-tag">[1. REQUEST]</span> <span class="log-cmd">baton new audit task "Refactor Auth Subsystem"</span><br><span class="log-note">Created structured contract ticket with machine-verifiable acceptance criteria.</span>`
       },
       {
-        nodeIdx: 1,
-        badgeText: "0-Token 待机中",
-        pulse: true,
-        metric: "PROBE_SLEEPING",
-        logZh: `<span class="text-emerald-400">⚡ 探针已挂起！</span> <span class="text-slate-300">执行 baton forward --wait。发起方进入静音待机（0 CPU, 0 Token）。</span>`,
-        logEn: `<span class="text-emerald-400">⚡ Probe Activated!</span> <span class="text-slate-300">Ran baton forward --wait. Author entered silent sleep (0 CPU, 0 Token).</span>`
+        activeBoxId: 'arch-gateway', metric: 'ASYNC_SLEEP (0 Token)',
+        logZh: `<span class="log-tag">[2. ASYNC SLEEP 挂起]</span> <span class="log-cmd">baton forward --daemon --blind</span><br><span class="log-note">脱敏思维链 &amp; 签发 Audit Nonce。主进程脱壳秒退，后台 0 Token 深度待机。</span>`,
+        logEn: `<span class="log-tag">[2. ASYNC SLEEP]</span> <span class="log-cmd">baton forward --daemon --blind</span><br><span class="log-note">Sanitized thinking chain &amp; issued Nonce. Main CLI exited; background sleeps at 0 Token.</span>`
       },
       {
-        nodeIdx: 2,
-        badgeText: "实证查验中",
-        pulse: false,
-        metric: "VERIFY_COMMIT",
-        logZh: `<span class="text-amber-300">🔍 真实代码核验：</span> <span class="text-slate-300">接收方提交 Git Commit <code class="text-white">a1b2c3d</code> 与真实变动路径，通过底层检验！</span>`,
-        logEn: `<span class="text-amber-300">🔍 Evidence Verification:</span> <span class="text-slate-300">Worker submitted Git Commit <code class="text-white">a1b2c3d</code> and modified files. Verified!</span>`
+        activeBoxId: 'arch-worker', metric: 'EVIDENCE_VERIFY',
+        logZh: `<span class="log-tag">[3. RESPONSE 交付]</span> <span class="log-cmd">baton receipt --evidence-paths "..." --audit-nonce "..."</span><br><span class="log-note">审查方终端实测通过，提交真实 Git Commit SHA 与修改路径，底层核验通过！</span>`,
+        logEn: `<span class="log-tag">[3. RESPONSE]</span> <span class="log-cmd">baton receipt --evidence-paths "..." --audit-nonce "..."</span><br><span class="log-note">Worker tested via terminal, submitted real Git Commit SHA. Verified on disk!</span>`
       },
       {
-        nodeIdx: 3,
-        badgeText: "毫秒唤醒",
-        pulse: true,
-        metric: "AUTO_WAKEN",
-        logZh: `<span class="text-cyan-300 font-bold">🎉 回执落盘！</span> <span class="text-emerald-400">探针瞬间感知 Exit 0，发起方 AI 自动被唤醒验收合入！闭环完成。</span>`,
-        logEn: `<span class="text-cyan-300 font-bold">🎉 Receipt Landed!</span> <span class="text-emerald-400">Probe sensed event & exited 0. Author AI wakes up instantly to merge!</span>`
+        activeBoxId: 'arch-deliver', metric: 'CALLBACK_WAKEN',
+        logZh: `<span class="log-tag">[4. CALLBACK 唤醒闭环]</span> <span class="log-ok">内核事件触发，发起方瞬间唤醒！</span><br><span class="log-note">执行 baton accept 完成复核，交接单状态翻转为 Closed 闭环归档。</span>`,
+        logEn: `<span class="log-tag">[4. CALLBACK]</span> <span class="log-ok">OS event triggered. Author AI awakens instantly!</span><br><span class="log-note">Runs baton accept. Task status closed and verified.</span>`
       }
     ];
 
-    function applyStage(idx) {
-      currentStage = idx;
-      const data = stagesData[idx];
+    const STAGE_EDGES = [
+      ['de0'],
+      ['de1'],
+      ['de2', 'dereject'],
+      ['de3', 'dewake']
+    ];
 
-      // Update Node Highlight
-      for (let i = 0; i < 4; i++) {
-        const node = document.getElementById('node-' + i);
-        if (i === data.nodeIdx) {
-          node.classList.add('active-node');
-        } else {
-          node.classList.remove('active-node');
-        }
-      }
+    function setDiagramStage(idx) {
+      currentDiagramStage = idx;
+      const data = diagramStages[idx];
 
-      // Update Stage Buttons
-      const btns = document.querySelectorAll('.stage-btn');
-      btns.forEach((b, i) => {
-        if (i === idx) {
-          b.className = 'stage-btn px-2.5 py-1 rounded bg-brand-500 text-black font-bold font-mono text-[11px] transition-all';
-        } else {
-          b.className = 'stage-btn px-2.5 py-1 rounded bg-white/5 text-slate-400 hover:text-white font-mono text-[11px] transition-all';
-        }
+      // Detail panels
+      ['arch-caller', 'arch-gateway', 'arch-worker', 'arch-deliver'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('is-active', id === data.activeBoxId);
       });
 
-      // Update Probe Pulse & Badge
-      const probePulse = document.getElementById('probe-pulse');
-      const probeBadge = document.getElementById('probe-badge');
-      if (data.pulse) {
-        probePulse.classList.remove('hidden');
-      } else {
-        probePulse.classList.add('hidden');
-      }
-      probeBadge.textContent = data.badgeText;
+      // Diagram nodes, edges and the evidence gate
+      document.querySelectorAll('.dnode').forEach((node, i) => {
+        node.classList.toggle('is-active', i === idx);
+      });
+      const activeEdges = STAGE_EDGES[idx] || [];
+      document.querySelectorAll('.dedge').forEach(edge => {
+        edge.classList.toggle('is-active', activeEdges.includes(edge.id));
+      });
+      const gate = document.getElementById('dgate');
+      if (gate) gate.classList.toggle('is-active', idx === 2 || idx === 3);
 
-      // Update Metric & Log
+      document.querySelectorAll('.seg-btn').forEach((p, i) => {
+        p.classList.toggle('is-active', i === idx);
+      });
+
       document.getElementById('probe-metric').textContent = data.metric;
       document.getElementById('flow-log').innerHTML = isZh ? data.logZh : data.logEn;
     }
 
-    function jumpStage(idx) {
-      clearInterval(timer);
-      applyStage(idx);
-      startLoop();
+    function startDiagramLoop() {
+      if (diagramTimer) clearInterval(diagramTimer);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      diagramTimer = setInterval(() => {
+        setDiagramStage((currentDiagramStage + 1) % diagramStages.length);
+      }, 4200);
     }
 
-    function startLoop() {
-      timer = setInterval(() => {
-        applyStage((currentStage + 1) % stagesData.length);
-      }, 3500);
-    }
-
-    // Initialize flow loop
-    applyStage(0);
-    startLoop();
-
-    // Copy Button
-    const copyBtn = document.getElementById('copy-btn');
-    const copyIcon = document.getElementById('copy-icon');
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText('npm install -g agent-baton');
-      copyIcon.textContent = '✓';
-      setTimeout(() => copyIcon.textContent = '📋', 2000);
+    // Click a node in the diagram to jump to that stage
+    document.querySelectorAll('.dnode').forEach(node => {
+      node.addEventListener('click', () => {
+        setDiagramStage(Number(node.getAttribute('data-stage')));
+        startDiagramLoop();
+      });
+    });
+    document.querySelectorAll('.seg-btn').forEach(p => {
+      p.addEventListener('click', startDiagramLoop);
     });
 
-    // Bilingual Dictionary
-    let isZh = true;
-    const i18n = {
-      zh: {
-        'tag-hero': '实证驱动 · 零耗能状态探针',
-        'h1-hero': 'AI 接力写代码，用 <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">真实证据</span> 说话',
-        'desc-hero': '必须携带真实 Git 提交与改动文件，空口自称直接拦截。<strong>交接状态探针</strong>静音休眠待机，回执到达毫秒自动唤醒！',
-        'pipeline-title': '实时交接流程图 · 动态闭环演示',
-        'stage-indicator': '阶段:',
-        'n1-title': '发起方 Agent',
-        'n1-desc': '创建任务单，列明修改要求与测试标准。',
-        'n2-title': '交接状态探针',
-        'n2-desc': '挂起后台静音监听，0 CPU、0 Token 待机。',
-        'n3-title': '接收方 & 真实证据',
-        'n3-desc': '施工改代码，必须附带 Git Commit 与变动文件。',
-        'n4-title': '探针唤醒 · 自动闭环',
-        'n4-desc': '回执到达秒级唤醒原会话，复核无误合入完成。',
-        'diff-title': '为什么不用传统对话，而要用 Baton 接力？',
-        'diff-desc': '解决多 AI 编程协作中最常踩的 3 大坑',
-        'c1-h': '杜绝假装改完',
-        'c1-p': '以前 AI 经常说“已经改好”，实际根本没动文件。Baton 强制查验 Git Commit，没写真实代码休想交差。',
-        'c2-h': '静默待机不耗电',
-        'c2-p': '不用死循环轮询，笔记本不再发烫。探针启动后 AI 彻底静默，等待期间零 CPU 占用、零 Token 浪费。',
-        'c3-h': '自动唤醒不用人肉搬运',
-        'c3-p': '接收方写完回执的一瞬间，发起方自动被唤醒继续干活，从此告别来回切换窗口复制提示词的繁琐。',
-        'qs-title': '日常使用只有 4 步',
-        'qs-desc': '简单好记，不需要死记硬背复杂配置',
-        'q1-t': '创建任务单',
-        'q1-d': '明确任务目标与验收判据',
-        'q2-t': '转递并启动探针',
-        'q2-d': '生成提示词，发起方自动静音待机',
-        'q3-t': '接收方提交真实证据',
-        'q3-d': '必须附带 Git Commit 与变动文件',
-        'q4-t': '自动唤醒闭环',
-        'q4-d': '发起方自动苏醒，确认改动合入'
-      },
-      en: {
-        'tag-hero': 'Evidence-First · 0-Token Status Probe',
-        'h1-hero': 'Pass the Baton Between AI Agents with <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-emerald-200">Real Evidence</span>',
-        'desc-hero': 'Enforcing real Git commits & diffs. Our unique <strong>Status Probe</strong> puts your AI into 0-token silent sleep and wakes it up automatically.',
-        'pipeline-title': 'Live Handoff Pipeline · Dynamic Simulation',
-        'stage-indicator': 'Stage:',
-        'n1-title': 'Author Agent',
-        'n1-desc': 'Creates task ticket with objective acceptance criteria.',
-        'n2-title': 'Status Probe',
-        'n2-desc': 'Sleeps silently in background: 0 CPU, 0 Token consumed.',
-        'n3-title': 'Worker & Proof',
-        'n3-desc': 'Codes changes; must submit real Git commit SHA & paths.',
-        'n4-title': 'Auto Wakeup & Close',
-        'n4-desc': 'Receipt arrival auto-wakes author to verify and close.',
-        'diff-title': 'Why Use Baton Instead of Naive Chat?',
-        'diff-desc': 'Solving the 3 biggest multi-agent headaches',
-        'c1-h': 'Zero Fake Completions',
-        'c1-p': 'No more "Done & tested" without actual edits. Baton verifies commits on disk.',
-        'c2-h': 'Zero CPU & Token Waste',
-        'c2-p': 'No polling loops while waiting. Laptops stay cool, zero battery drain.',
-        'c3-h': 'Zero Manual Copy-Pasting',
-        'c3-p': 'Author wakes up automatically via OS event notification once receipt arrives.',
-        'qs-title': '4 Simple Steps in Daily Use',
-        'qs-desc': 'Intuitive and easy to remember without complex setup',
-        'q1-t': 'Create Ticket',
-        'q1-d': 'Define goal and acceptance criteria',
-        'q2-t': 'Forward & Sleep',
-        'q2-d': 'Outputs pass prompt and enters silent wait',
-        'q3-t': 'Submit Evidence',
-        'q3-d': 'Must include Git commit and file paths',
-        'q4-t': 'Auto Wakeup',
-        'q4-d': 'Author resumes automatically and closes'
-      }
-    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const svg = document.getElementById('batondiagram');
+      if (svg && svg.pauseAnimations) svg.pauseAnimations();
+    }
 
+    setDiagramStage(0);
+    startDiagramLoop();
+
+    /* ── Copy to clipboard (delegated) ─────────────────────────── */
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-copy]');
+      if (!btn) return;
+      const text = btn.getAttribute('data-copy') || '';
+      const done = () => {
+        const label = btn.querySelector('span:last-child');
+        if (label && label.textContent !== '') {
+          const original = label.textContent;
+          label.textContent = '✓ 已复制';
+          setTimeout(() => { label.textContent = original; }, 1800);
+        } else {
+          btn.style.color = 'var(--accent)';
+          setTimeout(() => { btn.style.color = ''; }, 1800);
+        }
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done).catch(() => {});
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (err) {}
+        document.body.removeChild(ta);
+      }
+    });
+
+    /* ── Language switch ───────────────────────────────────────── */
     const langBtn = document.getElementById('lang-btn');
     const langText = document.getElementById('lang-text');
     langBtn.addEventListener('click', () => {
@@ -581,8 +1386,22 @@
         const k = el.getAttribute('data-i18n');
         if (dict[k]) el.innerHTML = dict[k];
       });
-      applyStage(currentStage);
+      setDiagramStage(currentDiagramStage);
     });
+
+    /* ── Scroll reveal (with hard fallback) ────────────────────── */
+    (function () {
+      const els = document.querySelectorAll('.reveal');
+      const showAll = () => els.forEach(el => el.classList.add('in'));
+      if (!('IntersectionObserver' in window)) { showAll(); return; }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) { entry.target.classList.add('in'); io.unobserve(entry.target); }
+        });
+      }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+      els.forEach(el => io.observe(el));
+      setTimeout(showAll, 1400);
+    })();
   </script>
 </body>
 </html>

@@ -32,12 +32,17 @@ const R_DIR = path.join(ROOT, 'receipts');
 // ── 依赖方视角（--for <target>，跨仓）／ --for <lane>（仓内）──
 // 依赖方 agent 用「我的待办」单一入口：只列 target===<target>（或 to_lane===<lane>）且未闭环的交接。
 // 是否计入 pending 见 isPendingFor：draft + forwarded 一律计入（v2.7 修正，不再按 target 区分）。
-const VALID_TARGETS = new Set(['swoop', 'prospero', 'iggle', 'coreml', 'tappy', 'yiqiyihuihua']);
 let hubCfg = null;
 try {
   const cfgPath = path.join(ROOT, '.handoff-hub.json');
   if (fs.existsSync(cfgPath)) hubCfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
 } catch {}
+
+const VALID_TARGETS = new Set(
+  hubCfg && Array.isArray(hubCfg.targets) && hubCfg.targets.length
+    ? hubCfg.targets.map(s => String(s).toLowerCase())
+    : ['frontend', 'backend', 'mobile', 'audit']
+);
 
 function detectLang() {
   if (process.env.BATON_LANG) {
@@ -223,8 +228,8 @@ function nextStep(r) {
       if (t === 'iggle') return isZh ? '已转递，等 iggle 适配回执' : 'Forwarded, awaiting adapter receipt';
       return isZh ? `已转递，等 ${t} 回执（回执到后输 /sync 登记）` : `Forwarded, awaiting ${t} receipt`;
     case 'received':
-      if (t === 'iggle') return isZh ? 'iggle 已回执，等依赖方独立实测后闭环' : 'Receipt submitted, awaiting verification';
-      return isZh ? `已收 ${t} 回执：你（iggle）独立实测后闭环` : `Received ${t} receipt: verify independently then close`;
+      if (t === 'iggle') return isZh ? '已回执，等独立实测后闭环' : 'Receipt submitted, awaiting verification';
+      return isZh ? `已收 ${t} 回执：发起方独立实测后闭环` : `Received ${t} receipt: verify independently then close`;
     default:
       return '';
   }
@@ -316,8 +321,8 @@ if (FOR) {
       }
       if (recv.length) {
         lines.push(MODE === 'intra-repo'
-          ? `- 已回执待发起 lane 实测（${recv.length}）:`
-          : `- 已回执待 iggle 实测（${recv.length}）:`);
+          ? (isZh ? `- 已回执待发起 lane 实测（${recv.length}）:` : `- Receipts pending initiator verification (${recv.length}):`)
+          : (isZh ? `- 已回执待发起方实测（${recv.length}）:` : `- Receipts pending initiator verification (${recv.length}):`));
         for (const r of recv) {
           lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
           const step = nextStepFor(r);
