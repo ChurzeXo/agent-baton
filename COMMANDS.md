@@ -61,6 +61,7 @@ Mark a ticket as forwarded to the receiving lane, optionally stripping cognitive
 baton forward <id> --blind --wait
 
 # Options:
+#   --daemon   Detach daemon process instantly (<0.1s) using Node.js unref()
 #   --blind    Physically sanitize <thinking> tags and subjective excuses
 #   --wait     Sleep at 0-Token until receipt is filed, waking automatically
 #   --timeout  Timeout duration (e.g. 30m, 1h; default: 30m)
@@ -69,7 +70,7 @@ baton forward <id> --blind --wait
 ### `baton wait`
 Standalone 0-Token event-driven watcher (powered by OS `fs.watch`).
 ```bash
-baton wait <id> [--timeout 30m]
+baton wait <id> [--timeout 30m] [--daemon]
 ```
 *Note*: Exits with code `0` when receipt lands (`received`/`closed`). Automatically wakes up your coding agent session. Exits with `124` on timeout.
 

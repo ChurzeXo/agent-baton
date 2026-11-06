@@ -21,7 +21,7 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
@@ -122,8 +122,9 @@ const INTRA_RESP_RE = /^[A-Za-z0-9_-]+-\d{8}-\d{2}-(task|bug|feature|question|co
 
 // ── 语言与国际化侦测（Locale & i18n Detection）───────────────────────────
 function detectLang() {
-  if (process.env.BATON_LANG) {
-    return process.env.BATON_LANG.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  if (process.env.BATON_LANG || process.env.HANDOFF_LANG) {
+    const l = (process.env.BATON_LANG || process.env.HANDOFF_LANG).toLowerCase();
+    return l.startsWith('zh') ? 'zh' : 'en';
   }
   if (HUB_CONFIG && (HUB_CONFIG.locale || HUB_CONFIG.lang)) {
     return String(HUB_CONFIG.locale || HUB_CONFIG.lang).toLowerCase().startsWith('zh') ? 'zh' : 'en';
@@ -138,6 +139,16 @@ function detectLang() {
   const envLang = process.env.LC_ALL || process.env.LC_MESSAGES || process.env.LANG || '';
   if (envLang.toLowerCase().startsWith('zh')) {
     return 'zh';
+  }
+  // 检查当前工程主指令文件（AGENTS.md / CLAUDE.md / README.md）是否包含中文语料
+  for (const f of ['AGENTS.md', 'CLAUDE.md', 'README.md']) {
+    try {
+      const p = path.join(process.cwd(), f);
+      if (fs.existsSync(p)) {
+        const head = fs.readFileSync(p, 'utf8').slice(0, 3000);
+        if (/[\u4e00-\u9fa5]/.test(head)) return 'zh';
+      }
+    } catch {}
   }
   return 'en';
 }
@@ -623,9 +634,20 @@ function cmdNew(args) {
   };
   const body = H_BODY.replaceAll('<TITLE>', title).replaceAll('<DIR>', dirLabel);
   writeFM(file, fm, body);
-  console.log(`✅ 已创建交接 ${id}`);
-  console.log(`   文件: ${file}`);
-  console.log(`   下一步: 填写正文 → handoff forward ${id}；发起方可挂起后台监听: handoff wait ${id} --timeout 30m`);
+  const isZh = detectLang() === 'zh';
+  if (isZh) {
+    console.log(`✅ 已创建交接 ${id}`);
+    console.log(`   文件: ${file}`);
+    console.log(`   👉 关键动作: 填写交接正文后，【必须立即执行】以下命令转递并挂起后台监听（带 --wait 置于后台运行）：`);
+    console.log(`      baton forward ${id} --wait`);
+    console.log(`      （一条命令完成标记转递、打印标准接单提示词，并在回执到达时自动唤醒发起方闭环）`);
+  } else {
+    console.log(`✅ Created Cross-Repo Baton ${id}`);
+    console.log(`   File: ${file}`);
+    console.log(`   👉 Mandatory Next Step: After filling content, you MUST run:`);
+    console.log(`      baton forward ${id} --wait`);
+    console.log(`      (Marks forwarded, prints pass prompt, and waits in background for auto-wakeup)`);
+  }
 }
 
 // 仓内模式：new <lane> <type> "<标题>" —— lane = 接收通道（= 回执撰写方 = 文件名前缀）
@@ -676,9 +698,20 @@ function cmdNewIntra(args) {
   };
   const body = H_BODY_INTRA.replaceAll('<TITLE>', title).replaceAll('<LANE>', l).replaceAll('<WS>', ws).replaceAll('<AUDIT_NOTE>', auditNote);
   writeFM(file, fm, body);
-  console.log(`✅ 已创建仓内交接 ${id}（lane=${l} · workspace=${ws}）`);
-  console.log(`   文件: ${file}`);
-  console.log(`   下一步: 接收方开工写 receipts/${id}-resp.md；发起方可挂起后台监听: handoff wait ${id} --timeout 30m`);
+  const isZh = detectLang() === 'zh';
+  if (isZh) {
+    console.log(`✅ 已创建仓内交接 ${id}（lane=${l} · workspace=${ws}）`);
+    console.log(`   文件: ${file}`);
+    console.log(`   👉 关键动作: 填写交接正文后，【必须立即执行】以下命令转递并挂起后台监听（带 --wait 置于后台运行）：`);
+    console.log(`      baton forward ${id} --wait`);
+    console.log(`      （一条命令完成标记转递、打印标准接单提示词，并在回执到达时自动唤醒发起方闭环）`);
+  } else {
+    console.log(`✅ Created Intra-Repo Baton ${id} (lane=${l}, workspace=${ws})`);
+    console.log(`   File: ${file}`);
+    console.log(`   👉 Mandatory Next Step: After filling content, you MUST run:`);
+    console.log(`      baton forward ${id} --wait`);
+    console.log(`      (Marks forwarded, prints pass prompt, and waits in background for auto-wakeup)`);
+  }
 }
 
 function cmdStatus(args) {
@@ -1010,7 +1043,58 @@ function cmdReceipt(args) {
   printReceiptDeliveryLine(rFile, needsChange);
 }
 
+/** 将 wait 命令作为完全脱钩的独立后台守护进程启动（金蝉脱壳 · 0-阻塞瞬间退出）。
+ * 核心原理：
+ * 1. 使用 child_process.spawn 独立启动 Node 进程执行 baton wait <id> ...
+ * 2. detached: true 创建新的进程组，不随父会话结束而终止。
+ * 3. stdio 重定向至独立日志文件（避免标准 I/O 管道占有导致父进程挂起）。
+ * 4. 调用 child.unref() 从父进程事件循环引用中剔除，允许父命令在 0.1 秒内安全退出。
+ */
+function spawnDaemonWait(id, extraArgs = []) {
+  const isZh = detectLang() === 'zh';
+  const logDir = path.join(ROOT, MODE === 'intra-repo' ? '.handoffs/logs' : 'logs');
+  try { fs.mkdirSync(logDir, { recursive: true }); } catch {}
+  const logFile = path.join(logDir, `wait-${id}.log`);
+
+  let outFd = 'ignore';
+  let errFd = 'ignore';
+  try {
+    const fd = fs.openSync(logFile, 'a');
+    outFd = fd;
+    errFd = fd;
+  } catch {}
+
+  const cliPath = fs.realpathSync(process.argv[1]);
+  const cleanArgs = extraArgs.filter(a => a !== '--daemon' && a !== '-d' && a !== id);
+  const spawnArgs = [cliPath, 'wait', id, ...cleanArgs];
+  if (MODE === 'intra-repo') {
+    spawnArgs.push('--root', ROOT);
+  }
+
+  const child = spawn(process.execPath, spawnArgs, {
+    detached: true,
+    stdio: ['ignore', outFd, errFd],
+    cwd: ROOT,
+    env: { ...process.env, BATON_DAEMON: '1' }
+  });
+
+  child.unref();
+
+  if (isZh) {
+    console.log(`🚀 [金蝉脱壳] 后台监听守护进程已成功启动并脱钩！`);
+    console.log(`   - 守护进程 PID: ${child.pid}`);
+    console.log(`   - 监听日志输出: ${logFile}`);
+    console.log(`   - 命令已安全退出（耗时 < 0.1s），后台 0-Token 持续监听回执到达。\n`);
+  } else {
+    console.log(`🚀 [Daemon Detached] Background listener daemon launched and detached!`);
+    console.log(`   - Daemon PID: ${child.pid}`);
+    console.log(`   - Log output: ${logFile}`);
+    console.log(`   - Process safely exited (< 0.1s), listening in background with 0 tokens.\n`);
+  }
+}
+
 async function cmdForward(args) {
+  const isDaemon = args.includes('--daemon') || args.includes('-d');
   const shouldWait = args.includes('--wait') || args.includes('-w');
   const valFlags = ['--timeout', '-t', '--interval', '-i'];
   const valueIdx = new Set();
@@ -1018,7 +1102,7 @@ async function cmdForward(args) {
   const id = args.find((a, i) => !a.startsWith('-') && !valueIdx.has(i));
 
   if (!id) {
-    console.error('用法: handoff forward <id> [--wait]');
+    console.error('用法: baton forward <id> [--wait] [--daemon]');
     process.exit(2);
   }
   const file = path.join(H_DIR, `${id}.md`);
@@ -1034,17 +1118,22 @@ async function cmdForward(args) {
     console.log(`✅ 已标记转递: ${id}`);
   }
 
-  // 跨仓或仓内 separate 输出提示词行
-  const ws = MODE === 'intra-repo' ? (fm.workspace || 'same') : undefined;
-  if (MODE !== 'intra-repo' || ws !== 'same') {
-    cmdPrompt([id]);
-  }
+  // 无论跨仓还是仓内（含 same / separate），一律输出标准交接提示词供一键复制
+  cmdPrompt([id]);
 
-  if (shouldWait) {
+  if (isDaemon) {
+    const waitArgs = args.filter(a => a !== '--wait' && a !== '-w' && a !== '--daemon' && a !== '-d');
+    spawnDaemonWait(id, waitArgs);
+  } else if (shouldWait) {
     const waitArgs = args.filter(a => a !== '--wait' && a !== '-w');
     await cmdWait(waitArgs);
   } else {
-    console.log(`\n👉 提示: 请立即启动后台监听: handoff wait ${id} --timeout 30m（置于后台运行），以便在回执到达时自动唤醒。`);
+    const isZh = detectLang() === 'zh';
+    if (isZh) {
+      console.log(`\n👉 提示: 请立即启动后台监听: baton forward ${id} --daemon（脱钩后台运行），或 baton forward ${id} --wait（配合外部后台任务挂起），以便在回执到达时自动唤醒。`);
+    } else {
+      console.log(`\n👉 Notice: Please start background listener immediately: baton forward ${id} --daemon (detached daemon) or baton forward ${id} --wait (background tool task) to auto-wake upon receipt.`);
+    }
   }
 }
 
@@ -2036,6 +2125,12 @@ function printWaitWakeupSummary(id, hFile, rFile, hFm) {
   console.log(`   handoff close ${id} -n "已独立实测验证..."`);
   console.log(`4. 如验收不通过则驳回重做：`);
   console.log(`   handoff reject ${id} -n "驳回原因与缺失点..."\n`);
+
+  if (process.env.BATON_DAEMON && process.platform === 'darwin') {
+    try {
+      execFileSync('osascript', ['-e', `display notification "交接 ${id} 回执已到达，请进行独立实测验收" with title "Agent Baton"`]);
+    } catch {}
+  }
 }
 
 /** 后台监听回执状态变迁（支持跨仓与同仓多窗口协同）。
@@ -2057,9 +2152,15 @@ async function cmdWait(args) {
   const id = args.find((a, i) => !a.startsWith('-') && !valueIdx.has(i));
 
   if (!id) {
-    console.error('用法: handoff wait <id> [--timeout <duration>] [--interval <duration>]');
-    console.error('示例: handoff wait SWOOP-20261104-01-feat --timeout 30m');
+    console.error('用法: baton wait <id> [--timeout <duration>] [--interval <duration>] [--daemon]');
+    console.error('示例: baton wait SWOOP-20261104-01-feat --timeout 30m --daemon');
     process.exit(2);
+  }
+
+  const isDaemon = args.includes('--daemon') || args.includes('-d');
+  if (isDaemon && !process.env.BATON_DAEMON) {
+    spawnDaemonWait(id, args);
+    return;
   }
 
   const hFile = path.join(H_DIR, `${id}.md`);
@@ -2259,8 +2360,9 @@ switch (cmd) {
   baton reject <id> -n "<驳回理由>"            审计驳回（退回执行方继续改）
   baton receipt <id> [-n "<回执正文>"] [--evidence-paths "..."] [--evidence-commits "..."] [--audit-nonce "..."]
                                                登记回执并翻 received（带双盲防伪与真实证据门禁）
-  baton forward <id> [--wait] [--blind]        标记已转递（--blind 双盲脱敏；--wait 进入后台监听）
-  baton wait <id> [--timeout <dur>]            后台 0-Token 事件监听回执到达并自动唤醒
+  baton forward <id> [--wait] [--daemon] [--blind]
+                                               标记已转递（--daemon 脱钩后台守护；--wait 阻塞监听；--blind 双盲脱敏）
+  baton wait <id> [--timeout <dur>] [--daemon] 后台 0-Token 事件监听回执到达并自动唤醒（--daemon 瞬间脱钩入后台）
   baton open <id>                              打开交接文件
   baton show <id>                              triage 摘要视图（不 dump 全文）
   baton check                                  全库合规体检（任务收尾判据）
@@ -2288,8 +2390,9 @@ Usage:
   baton reject <id> -n "<reason>"              Audit rejection (return to executor for revision)
   baton receipt <id> [-n "<body text>"] [--evidence-paths "..."] [--evidence-commits "..."] [--audit-nonce "..."]
                                                Record receipt and set received (with double-blind verification & evidence gate)
-  baton forward <id> [--wait] [--blind]        Mark forwarded (--blind desensitizes; --wait enters background listener)
-  baton wait <id> [--timeout <dur>]            0-Token background event listener waiting for receipt and auto-wake
+  baton forward <id> [--wait] [--daemon] [--blind]
+                                               Mark forwarded (--daemon detached; --wait blocking listener; --blind desensitize)
+  baton wait <id> [--timeout <dur>] [--daemon] 0-Token background event listener waiting for receipt (--daemon detaches)
   baton open <id>                              Open handoff file in editor
   baton show <id>                              Triage summary view (does not dump full text)
   baton check                                  Full hub compliance inspection (exit condition)
