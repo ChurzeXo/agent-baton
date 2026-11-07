@@ -7,13 +7,14 @@
 
 ## 1. Lifecycle Overview
 
-The Baton lifecycle strictly advances through 4 deterministic states:
+The Baton lifecycle strictly advances through 5 deterministic states:
 
 ```
-[draft] ──(baton forward)──> [forwarded] ──(baton receipt)──> [received] ──(baton accept)──> [closed]
-                                 │                                 │
-                                 └──(0-token wait)                 └──(baton reject)──> [forwarded]
+[draft] ──(baton forward)──> [forwarded] ──(baton receipt)──> [received] ──(baton deliver)──> [delivered] ──(baton accept)──> [closed]
+                                 │                                                                  │
+                                 └──(0-token wait)──────────────────────────────────────────────────┴──(baton reject)──> [forwarded]
 ```
+*(Tip: `baton receipt <id> --deliver` advances directly from `forwarded` to `delivered` in a single step).*
 
 ---
 
@@ -72,7 +73,7 @@ Standalone 0-Token event-driven watcher (powered by OS `fs.watch`).
 ```bash
 baton wait <id> [--timeout 30m] [--daemon]
 ```
-*Note*: Exits with code `0` when receipt lands (`received`/`closed`). Automatically wakes up your coding agent session. Exits with `124` on timeout.
+*Note*: Exits with code `0` when final delivery lands (`delivered`/`closed`). Automatically wakes up your coding agent session. Exits with `124` on timeout.
 
 ### `baton prompt`
 Generate the standard, copy-pasteable baton pass prompt for manual cross-session/window relay.
@@ -81,9 +82,10 @@ baton prompt <id>
 ```
 
 ### `baton receipt`
-Register an execution receipt and transition ticket to `received`.
+Register an execution receipt and transition ticket to `received` (or directly to `delivered` with `--deliver`).
 ```bash
 baton receipt <id> \
+  [--deliver] \
   --evidence-paths "<file1,file2>" \
   --evidence-commits "<commit-sha>" \
   [--audit-nonce "<nonce>"] \
@@ -93,12 +95,26 @@ baton receipt <id> \
 - `--evidence-paths`: Verified on disk via `fs.existsSync`.
 - `--evidence-commits`: Verified in Git history via `git cat-file -e`.
 - `--audit-nonce`: Mandatory when `to_lane=audit` to prevent self-signing.
+- `--deliver`: Atomically executes final delivery (`delivered`), immediately notifying initiator.
+
+### `baton deliver`
+Explicitly finalize task completion and transition ticket from `received` to `delivered`.
+```bash
+baton deliver <id> [-n "<delivery note>"]
+```
+*Guards*:
+- Verifies receipt exists and passes all content/evidence gates.
+- Anti-self-closing: Initiators are blocked from delivering on behalf of executors.
+- Stamps `delivered_at` timestamp and wakes up initiator's background probe for independent verification.
 
 ### `baton accept`
 Accept the receipt, verify invariants, and formally close the handoff.
 ```bash
-baton accept <id> -n "<acceptance summary>"
+baton accept <id> -n "<acceptance summary>" [--legacy-exempt]
 ```
+*Guards*:
+- Requires ticket to be in `delivered` state (or historical ticket with `--legacy-exempt`).
+- Hard-fails if executor has not explicitly marked final delivery.
 
 ### `baton reject`
 Reject the receipt due to failed tests or unmet invariants, returning it to `forwarded` for rework.

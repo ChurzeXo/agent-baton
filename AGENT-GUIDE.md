@@ -7,10 +7,11 @@ CLI 已有 60 分钟新鲜度门禁（receipt/accept/reject 时拦）和 check �
 
 **铁律：在调用任何 handoff 工具前，先确认你刚跑过 `handoff status` 且基于「进行中」清单做判断。**
 
-> **「进行中 / 待办」唯一定义（v2.12.5 · README / 接入桩 / 本文件三处同义，旧文冲突以此为准）**
+> **「进行中 / 待办 / 生命周期」唯一定义（v2.18.0 · README / 接入桩 / 本文件三处同义）**
 > - 「进行中」= 未闭环（`status ≠ closed`）且归属当前方。
-> - **待办 = `draft` + `forwarded`**——落我归属即该我动工，**含驳回退回的返工单**；`forward` 只是发起方可选的事后标记，**严禁**用「`draft`/`forwarded` 不处理」判退（旧接入桩此条与 README v2.7 直接相悖、且把同仓新单全量拉黑，v2.12.5 废）。
-> - `received` = 已回执：执行方跳过（重跑 receipt 幂等提示），发起方收回执=审计。
+> - **待办 = `draft` + `forwarded`**——落我归属即该我动工，**含驳回退回的返工单**；`forward` 只是发起方可选的事后标记，**严禁**用「`draft`/`forwarded` 不处理」判退。
+> - `received` = 回执草稿已登记（执行方可能仍在自检中，尚未交付）。
+> - `delivered` = 执行方已完成终态交付（`delivered_at` 已烙印，触发发起方后台探针唤醒与独立验收）。
 > - `closed` 不处理。`accepted`/`rejected` 为废止状态、不存在。
 > - 因此执行方冷启动 = `handoff status --for <本方 lane|target>` 直取本方待办。
 
@@ -29,20 +30,26 @@ CLI 已有 60 分钟新鲜度门禁（receipt/accept/reject 时拦）和 check �
 
 **任意否定 → 禁止调用工具。先跑 `baton status`（或 `handoff status`），再按结果决定下一步。**
 
-## 强制操作序列（入站 = 接单/回执 · 仓内）
+## 强制操作序列（入站 = 接单/回执/交付 · 仓内）
 1. `baton status --for <本方 lane>`（冷启动直取本方待办；全量 `baton status` 供发起方巡检）
 2. 从「待办」（`draft`/`forwarded`）筛选 `to_lane == 当前 lane`。确认目标 ID（如多条且未指定 → 列出并请用户点名，不擅自选）
 3. `baton show <ID>`
 4. 按边界最小改动（仅该 lane 应改文件）
-5. 写回执：**照抄 `$(lab path handoffs)/RESPONSE-TEMPLATE.md`「回执模板（可直接复制）」骨架** → `baton receipt <ID> -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"`（若 `to_lane=audit` 须附 `--audit-nonce "<nonce>"`；无改动用 `--evidence-note`）
+5. 写回执与交付：**照抄 `$(lab path handoffs)/RESPONSE-TEMPLATE.md`「回执模板（可直接复制）」骨架** →
+   优先使用一步直达：`baton receipt <ID> --deliver -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"`
+   （或分步执行 `baton receipt`，在自检全过收尾时执行 `baton deliver <ID>`）。（若 `to_lane=audit` 须附 `--audit-nonce "<nonce>"`；无改动用 `--evidence-note`；严禁提前抢跑）
 6. `baton check`（exit 0）
-7. **自动唤醒闭环**：回执登记后，发起方后台监听探针将自动 Exit 0 唤醒进行独立验收，无需人工回传回执。
+7. **自动唤醒闭环**：执行方 deliver 登记后，发起方后台监听探针将自动 Exit 0 唤醒进行独立验收，无需人工回传回执。
+
+## 防抢跑与终态交付纪律（v2.18.0 强制）
+- **落盘不等于交付**：回执文件物理落盘不代表执行方会话结束。执行方必须通过 `baton deliver <ID>`（或 `baton receipt --deliver`）显式标记终态交付；
+- **发起方禁止抢跑**：在未收到 `delivered` 信号前，发起方 wait 探针不会唤醒、accept 硬性拦截；**严禁发起方在收到终态交付信号前提前修改 Backlog 或规划文档**。
 
 ## 强制操作序列（出站 = 建/发交接 · 强制闭环）
 1. `baton new <target|lane> <type> "<标题>"` 并填写正文
 2. **转递并挂起后台监听（必须执行）**：
-   执行 `baton forward <ID> --wait`（置于后台运行 `run_in_background: true`；需双盲脱敏加 `--blind`）
-   ——一条命令完成标记转递、打印接单提示词与挂起待机；回执到达后 Exit 0 自动唤醒本会话进行独立验收闭环。
+   执行 `baton forward <ID> --wait`（AI 客户端推荐：由宿主进程树托管后台任务，回执到达 Exit 0 自动唤醒；人类终端可用 `--daemon` 脱钩；需双盲脱敏加 `--blind`）
+   ——一条命令完成标记转递、打印接单提示词与挂起后台监听；回执到达后 Exit 0 自动唤醒本会话进行独立验收闭环。
 3. **输出交接提示词（末块规范）**：本地 AI 根据用户本地语言自适应输出，标题、描述与独立代码块分离（其后无任何正文）：
    ## 交接提示词
    > 直接复制下方提示词，发送给接收方 Agent 接单：

@@ -193,11 +193,11 @@ const isZh = detectLang() === 'zh';
 
 const STATUS_LABEL = isZh
   ? (MODE === 'intra-repo'
-      ? { draft: '待执行', forwarded: '待执行', received: '已收回执', closed: '已闭环' }
-      : { draft: '待转递', forwarded: '已转递', received: '已收回执', closed: '已闭环' })
+      ? { draft: '待执行', forwarded: '待执行', received: '已写回执', delivered: '已交付（待验收）', closed: '已闭环' }
+      : { draft: '待转递', forwarded: '已转递', received: '已写回执', delivered: '已交付（待验收）', closed: '已闭环' })
   : (MODE === 'intra-repo'
-      ? { draft: 'Pending Execution', forwarded: 'Pending Execution', received: 'Receipt Submitted', closed: 'Closed' }
-      : { draft: 'Draft', forwarded: 'Forwarded', received: 'Receipt Submitted', closed: 'Closed' });
+      ? { draft: 'Pending Execution', forwarded: 'Pending Execution', received: 'Receipt Drafted', delivered: 'Delivered (Pending Acceptance)', closed: 'Closed' }
+      : { draft: 'Draft', forwarded: 'Forwarded', received: 'Receipt Drafted', delivered: 'Delivered (Pending Acceptance)', closed: 'Closed' });
 
 // 只引导固定命令（/inbox、/sync），不带 <ID> 的 /handoff 子命令——带 ID 命令用户记不住。
 function nextStep(r) {
@@ -207,8 +207,13 @@ function nextStep(r) {
     const lane = r.to_lane || '?';
     if (r.status === 'received') {
       return isZh
-        ? `lane=${lane} · 已收回执（等发起 lane 实测后 close）`
-        : `lane=${lane} · Receipt submitted (awaiting initiator verification to close)`;
+        ? `lane=${lane} · 已写回执草稿（等执行方 baton deliver 交付）`
+        : `lane=${lane} · Receipt drafted (awaiting executor baton deliver)`;
+    }
+    if (r.status === 'delivered') {
+      return isZh
+        ? `lane=${lane} · 已交付（等发起 lane 实测后 close）`
+        : `lane=${lane} · Delivered (awaiting initiator verification to close)`;
     }
     if (r.status === 'closed') {
       return isZh ? `lane=${lane} · 已闭环` : `lane=${lane} · Closed`;
@@ -228,8 +233,11 @@ function nextStep(r) {
       if (t === 'iggle') return isZh ? '已转递，等 iggle 适配回执' : 'Forwarded, awaiting adapter receipt';
       return isZh ? `已转递，等 ${t} 回执（回执到后输 /sync 登记）` : `Forwarded, awaiting ${t} receipt`;
     case 'received':
-      if (t === 'iggle') return isZh ? '已回执，等独立实测后闭环' : 'Receipt submitted, awaiting verification';
-      return isZh ? `已收 ${t} 回执：发起方独立实测后闭环` : `Received ${t} receipt: verify independently then close`;
+      if (t === 'iggle') return isZh ? '已写回执草稿，等执行方 deliver 交付' : 'Receipt drafted, awaiting delivery';
+      return isZh ? `已收 ${t} 回执草稿：等待终态交付 (baton deliver)` : `Received ${t} draft: awaiting baton deliver`;
+    case 'delivered':
+      if (t === 'iggle') return isZh ? '已终态交付，等独立实测后闭环' : 'Delivered, awaiting verification';
+      return isZh ? `已收 ${t} 终态交付：发起方独立实测后闭环` : `Delivered by ${t}: verify independently then close`;
     default:
       return '';
   }
@@ -239,11 +247,11 @@ function nextStep(r) {
 // 2026-09-04 事故根因：用户常把交接文档直接交给依赖方而不跑 `forward`，
 // 旧逻辑把 draft 排除在依赖方待办之外 → SWOOP-20260904-02 被误判「不属于本轮范围」。
 // `forward` 只是 iggle 侧可选的事后标记，**不是「已送达」的可靠信号**。
-// 故：draft / forwarded 一律计入 pending；received = 已回执（不 pending）；closed 不列出。
+// 故：draft / forwarded 一律计入 pending；received / delivered = 已回执/已交付（不 pending）；closed 不列出。
 // 「是否落到我手上」的可靠判据只有两条：① target === 当前工作区；② 用户直接给了文档
 // 或它出现在本命令的输出里。**不要用 draft/forwarded 判断该不该开工。**
 function isPendingFor(_target, status) {
-  if (status === 'closed' || status === 'received') return false;
+  if (status === 'closed' || status === 'received' || status === 'delivered') return false;
   if (status === 'draft' || status === 'forwarded') return true;
   return false;
 }
@@ -254,8 +262,13 @@ function nextStepFor(r) {
   if (MODE === 'intra-repo') {
     if (r.status === 'received') {
       return isZh
-        ? '已回执，等发起 lane 独立实测后 close'
-        : 'Receipt submitted, awaiting initiator verification to close';
+        ? '已写回执草稿，请在会话收尾时运行 baton deliver 交付'
+        : 'Receipt drafted, run baton deliver when wrapping up';
+    }
+    if (r.status === 'delivered') {
+      return isZh
+        ? '已终态交付，等发起 lane 独立实测后 close'
+        : 'Delivered, awaiting initiator verification to close';
     }
     return isZh
       ? `读 handoffs/${r.id}.md 开工 → 写 receipts/${r.id}-resp.md`
@@ -273,7 +286,9 @@ function nextStepFor(r) {
         ? (isZh ? `规格已定稿，切 coreml 角色开工 → 写 receipts/${r.id}-resp.md` : `Spec finalized, start as coreml → write receipts/${r.id}-resp.md`)
         : (isZh ? `已转递，读 handoffs/${r.id}.md 直接开工 → 写 receipts/${r.id}-resp.md` : `Forwarded: read handoffs/${r.id}.md to start → write receipts/${r.id}-resp.md`);
     case 'received':
-      return isZh ? '已回执，等 iggle 独立实测后 close' : 'Receipt submitted, awaiting verification to close';
+      return isZh ? '回执草稿已登记，请在收尾时运行 baton deliver 交付' : 'Receipt drafted, run baton deliver to finalize';
+    case 'delivered':
+      return isZh ? '已终态交付，等发起方独立实测后 close' : 'Delivered, awaiting verification to close';
     default:
       return '';
   }
@@ -305,6 +320,7 @@ if (FOR) {
   }
   const todo = mine.filter(r => isPendingFor(FOR, r.status));
   const recv = mine.filter(r => r.status === 'received');
+  const deliv = mine.filter(r => r.status === 'delivered');
   const lines = [];
   if (isZh) {
     lines.push(`[交接追踪 · ${ROOT}] ${FOR} 未闭环 ${mine.length} 项（${MODE === 'intra-repo' ? 'lane' : 'target'}=${FOR}）`);
@@ -320,10 +336,18 @@ if (FOR) {
         }
       }
       if (recv.length) {
-        lines.push(MODE === 'intra-repo'
-          ? (isZh ? `- 已回执待发起 lane 实测（${recv.length}）:` : `- Receipts pending initiator verification (${recv.length}):`)
-          : (isZh ? `- 已回执待发起方实测（${recv.length}）:` : `- Receipts pending initiator verification (${recv.length}):`));
+        lines.push(`- 已写回执待终态交付（${recv.length}）:`);
         for (const r of recv) {
+          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+          const step = nextStepFor(r);
+          if (step) lines.push(`      → 下一步：${step}`);
+        }
+      }
+      if (deliv.length) {
+        lines.push(MODE === 'intra-repo'
+          ? `- 已交付待发起 lane 实测（${deliv.length}）:`
+          : `- 已交付待发起方实测（${deliv.length}）:`);
+        for (const r of deliv) {
           lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
           const step = nextStepFor(r);
           if (step) lines.push(`      → 下一步：${step}`);
@@ -348,10 +372,18 @@ if (FOR) {
         }
       }
       if (recv.length) {
-        lines.push(MODE === 'intra-repo'
-          ? `- Receipt submitted, awaiting initiator verification (${recv.length}):`
-          : `- Receipt submitted, awaiting verification (${recv.length}):`);
+        lines.push(`- Draft receipts awaiting final delivery (${recv.length}):`);
         for (const r of recv) {
+          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+          const step = nextStepFor(r);
+          if (step) lines.push(`      → Next step: ${step}`);
+        }
+      }
+      if (deliv.length) {
+        lines.push(MODE === 'intra-repo'
+          ? `- Delivered, awaiting initiator verification (${deliv.length}):`
+          : `- Delivered, awaiting verification (${deliv.length}):`);
+        for (const r of deliv) {
           lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
           const step = nextStepFor(r);
           if (step) lines.push(`      → Next step: ${step}`);

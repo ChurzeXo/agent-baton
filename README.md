@@ -4,7 +4,10 @@
 > 拒绝人肉传话与上下文衰减。一条命令穿透仓库边界，接口与协作契约严密对齐，独立窗口双盲审计，事件驱动无感闭环。  
 > 本地中立的交接枢纽，被 **iggle / Swoop / Prospero / Tappy / 一期一卉花** 与**自动化运营**共用。
 > 不属于任何代码仓库；交接不出 iggle 仓库、回执不进 iggle 仓库（仍守 `AGENTS.md` 协作边界：依赖 agent 绝不改 iggle 文件）。
-> **契约版本 v2.16.5（2026-11-06）**：本文件是交接契约的**唯一真相源**——所有行为规则、命名规范、状态机只以这里为准；各仓库 AGENTS.md / 记忆文件只允许放指针桩，禁止复制细则（防漂移）。修改契约必须改本文件并升版本号。
+> **契约版本 v2.18.0（2026-11-07）**：本文件是交接契约的**唯一真相源**——所有行为规则、命名规范、状态机只以这里为准；各仓库 AGENTS.md / 记忆文件只允许放指针桩，禁止复制细则（防漂移）。修改契约必须改本文件并升版本号。
+> **v2.18.0 变更（2026-11-07 · 引入执行方终态交付机制 baton deliver · 彻底根治跨仓与多会话抢跑闭环竞态 · 状态机五态升级 · 动 STUB_BODY ⇒ 各载体须重跑 baton install）**：动因——Tappy 跨仓交接实证（2026-11-07）暴露核心时序竞态：执行方仅生成回执文件草稿尚未完成自检或收尾，`cmdWait` 探针仅据「mtime 变动 + 文件存在」即擅自翻 `received` 并提前唤醒发起方；发起方随之抢跑 `accept` 闭环并提前改写主线 Backlog，导致执行方会话尚未结束、事实却已被锁定的时序失控。①**显式终态交付（Explicit Final Delivery）**：引入全新子命令 `baton deliver <id>`（及原子复合选项 `baton receipt <id> --deliver`），由执行方在自检全过、会话收尾时显式提交终态交付，烙印 `delivered_at` 时间戳与 `delivered` 状态；②**探针抢跑彻底根治（Anti-Premature Wakeup）**：`cmdWait` 跨仓探针移除「回执变动自动翻 `received`」的脆弱逻辑，仅在检测到执行方显式交付（`delivered`/`closed`）后方 Exit 0 唤醒发起方；③**闭环硬门禁强化（Anti-Race Accept Gate）**：`cmdAccept` 增设 `delivered_at` 硬门禁，无显式交付声明一律拒绝闭环（Exit 1）；防提前闭环从仓内扩展至跨仓双向校验；闭环时写入 `accepted_at` 与 `delivered_at`，达成全生命周期审计链闭环；④**五态确定性状态机（5-State Lifecycle）**：`draft → forwarded → received → delivered → closed`，`handoff-status.mjs` 与 Mermaid 全面支持；⑤**存量无缝向前兼容（Legacy Exemption）**：自动豁免 2026-11-08 前的历史存量工单，保证现有 120 份交接 0 报错平滑升级；⑥**契约硬约束**：明确发起方在收到执行方显式交付前，严禁将未定稿回执写入主线规划或 Backlog。
+> **v2.17.0 变更（2026-11-06 · 解耦 --wait 与 --daemon · 构建全 AI 客户端与人类终端统一状态监听与唤醒模型 · 动 STUB_BODY ⇒ 各载体须重跑 baton install）**：动因——v2.16.6 将 `forward --wait` 强行合流为 `spawnDaemonWait` 脱钩后台，在人类终端免阻塞表现良好，但在托管式 AI 客户端（如 Google Antigravity、Claude Code、Cursor 等）中，因进程秒退导致宿主任务管理器无法接管后台任务，且孤儿 Node 退出时无法触发宿主 Reactive Wakeup 机制，导致长任务挂起与自动唤醒完全失效。①**语义解耦（Semantic Separation）**：还原 `--wait` 为标准托管阻塞等待（Managed process-tree waiting，保持进程树存活，依托 `fs.watch` + 自适应退避 0-Token 挂起，回执落地时 Exit 0 唤醒宿主）；还原 `--daemon` 为人类终端专用的 OS 孤儿脱钩（Detached OS daemon，秒退后台）；②**环境自适应感知（Smart Environment Auto-Detection）**：内置 `isAgentEnvironment()` 探针，感知 Antigravity、Claude Code、Cursor 等典型 Agent 宿主环境；在托管环境下，即便误传 `--daemon` 亦智能回退为托管阻塞等待，彻底杜绝唤醒丢失；③**统一规范接入桩（Agent Stub）**：出站最小操作序列指引升级为 `baton forward <ID> --wait`（AI 客户端宿主进程树托管；人类终端可选 `--daemon`）。
+> **v2.16.6 变更（2026-11-06 · forward --wait 统一为自脱钩后台守护 · 消除管道误杀面）**：动因——`baton forward <id> --wait` 原走进程内阻塞等待，在经由管道截断（如 `| head -6`）或外部工具超时包装时易遭 SIGPIPE/SIGTERM 误杀导致监听未挂起。①**forward --wait 统一为自脱钩守护**：`baton forward <id> --wait` 与 `--daemon` 彻底统一复用 `spawnDaemonWait`，父命令 <0.1s 退出、守护常驻后台并在回执到达时 Exit 0 唤醒；②**引导语与帮助文案纠正**：修复 `cmdNew` / `cmdNewIntra` 引导语中「置于后台运行」的脆弱描述，统一为自动脱钩后台守护安全指引，CLI 帮助同步更新；③**参数透明透传**：`wait` 与 `forward` 对 `--timeout` 等参数透传与独立 `baton wait` 行为完全保持一致。
 > **v2.16.5 变更（2026-11-06 · 守护监听路径纠偏 + 严防抢跑回执 + 出站守护探针规约 · 动 STUB_BODY ⇒ 各载体须重跑 baton install）**：动因——下游消费方实测反馈同仓协作时因混淆旧文档遗漏后台监听，且执行方中途受阻时抢跑提交 Verified 伪回执；同时修复 `spawnDaemonWait` 在同仓模式下日志路径嵌套 Bug。①**守护日志路径纠正**：修复 `spawnDaemonWait` 内 `ROOT` 叠加导致的 `.handoffs/.handoffs/logs` 嵌套目录；②**同仓免监听混淆消除**：移除历史模板「免转递」字样，明晰无论同仓还是跨仓，均必须启动后台监听探针以达成事件唤醒闭环；③**接入桩强化反抢跑回执**：早拦 Preflight 与入站序列明确要求「验收判据全部实测通过方可提交回执，中途受阻仅记录 reviews/，严禁提交抢跑回执」；④**出站优先推荐 `--daemon`**：一条命令完成转递、打印交接提示词与脱钩后台守护。
 > **v2.16.0 变更（2026-11-05 · 开源产品化基础 · 纯配置驱动 + 双盲审计防伪门禁 + 拓扑可视化）**：动因——面向开源发布标准，根除硬编码业务名，强化 Agent 角色身份隔离与防自签作弊。①**纯配置驱动（Zero-Hardcode）**：彻底解耦硬编码 target，新增 `units/handoffs/.handoff-hub.json` 作为事实源，`handoff.mjs` 与 `handoff-status.mjs` 动态加载，支持用户自定义 targets；②**跨仓脚手架 `handoff init --cross`**：一键生成独立中枢 Hub 目录与骨架配置；③**双盲审计与防伪挑战令牌（Audit Nonce）**：`to_lane=audit` 派单自动签发高熵一次性 Nonce，`handoff receipt` 必须带 `--audit-nonce` 核验通过方可盖章，根除本地同一会话伪造 `HANDOFF_LANE` 自签回执漏洞；④**双盲脱敏（`--blind`）**：`handoff forward --blind` 自动物理净化大模型主观思维链（`<thinking>` 等）与辩护小节，仅向审计方传递客观契约与 Diff；⑤**拓扑可视化（`--mermaid`）**：`handoff status --mermaid` 一键生成任务在各仓/各 Lane 间的实时 Mermaid 关系流向图。
 > **v2.15.1 变更（2026-11-04 · 能效深度优化 · 根除长程后台监听发热与卡顿）**：动因——`handoff wait` 后台监听在长程挂起时高频轮询打断 CPU 深度休眠。①**`fs.watch` 事件驱动**：接入 OS 内核级文件系统事件通知，文件写入瞬间毫秒级唤醒，等待期间 0 CPU 占用；②**`mtime` 守卫**：未变动时跳过 `readFileSync` 与正则解析；③**自适应动态退避**：兜底定时器动态自适应退避（2s→4s→8s→15s），唤醒降低 80%+；④**`handoff-status.mjs` 读盘去重**：消除重复 I/O。
@@ -88,7 +91,7 @@ units/handoffs/                    ← 契约 + 引擎层（版本化，稳定�
 handoff_id: SWOOP-20260816-01-bug
 target: swoop            # swoop | prospero | iggle | coreml | tappy | yiqiyihuihua（接收方；iggle = Swoop→iggle 反向发现）
 type: bug                # bug | feature | breaking | question
-status: draft            # draft → forwarded → received → closed
+status: draft            # draft → forwarded → received → delivered → closed
 needs_iggle_change: false
 common_version: v2.5     # ZSpec ④ 跨平台共享版本；变更触发全员失效回流（handoff drift --common）
 platform_versions: ''    # ZSpec ④ 平台专属版本，形如 `swoop=6aad880;prospero=v2.3`；某平台变更仅该平台下游失效回流
@@ -119,7 +122,7 @@ evidence_note: 无文件改动，仅配置            # 确无文件改动时用
 > 回执正文必含「部署提示（含钉值协同）」节；写回执的 agent 须另输出一段「转递话术」给用户——细则与话术三要素见 `RESPONSE-TEMPLATE.md`。
 
 ## 状态机
-`draft`（已写，待转递）→ `forwarded`（已转递，待回执）→ `received`（已收回执，iggle 处理中）→ `closed`（已闭环）
+`draft`（已写，待转递）→ `forwarded`（已转递，待回执）→ `received`（已写回执，待终态交付）→ `delivered`（已交付，等发起方验收）→ `closed`（已闭环）
 
 > **`forward` 是可选的事后标记（v2.12.5 澄清）**：`draft` 下执行方即可 `handoff receipt` 登记（**`draft → received` 直达合法**，与 `sync` 行为一致）；`received → forwarded`（`reject` 退回）后执行方照旧按待办返工。**不得**因状态是 `draft`/`forwarded` 拒收 / 拒回执 / 判「不归我管」——见下方 v2.7 条与「进行中」唯一定义。
 
@@ -275,7 +278,8 @@ Agent 发现待处理任务的规范行为：
 | `handoff show <ID>` | triage 视图：frontmatter + 节标题 + 首行（不 dump 全文；支持 `handoffs/<ID>.md` 与 `receipts/<ID>-resp.md`） |
 | `handoff accept <ID> -n "<验收结论>"` | 审计闭环：收回执=审计，**前置内容门禁**（该回执须过锚节 + 转递提示词 + evidence，否则拒闭环），通过即 `closed`（close 为同义别名；须附结论写入「验收记录」节） |
 | `handoff reject <ID> -n "<驳回理由>"` | 审计驳回：`received → forwarded` 退回执行方继续改 |
-| `handoff receipt <ID> [-n "<回执正文>"] [--needs-change] [--evidence-paths "a,b"] [--evidence-commits "<sha>"] [--evidence-repo key] [--evidence-note "..."]` | 登记回执并翻 `received`（**`draft`/`forwarded` 均可登记**——v2.12.5 起 `draft` 直达 `received`，`forward` 仅可选标记；`-n` 以该文本为回执正文落盘；落盘前过内容门禁：锚节 + 转递提示词 + evidence，缺即拒收；缺文件时落指针桩） |
+| `handoff receipt <ID> [-n "<回执正文>"] [--deliver] [--needs-change] [--evidence-paths "a,b"] [--evidence-commits "<sha>"] [--evidence-repo key] [--evidence-note "..."]` | 登记回执并翻 `received`（可选 `--deliver` 一步直达终态交付；`-n` 以该文本为回执正文落盘；落盘前过内容门禁：锚节 + 转递提示词 + evidence） |
+| `handoff deliver <ID> [-n "<交付补充说明>"]` | 执行方终态交付并翻 `delivered`（烙印 `delivered_at`；唤醒发起方后台 `wait` 探针进行独立实测与闭环） |
 | `handoff forward <ID>` | 标记已转递（**可选的事后标记**：跨仓留痕用；仓内 `workspace=same` 无转递事件可跳过——执行方照旧按待办动工） |
 | `handoff open <ID>` | 在编辑器打开交接文件 |
 | `handoff prompt <ID>` | 生成转递提示词（跨仓 v2.8.3 一行式：`请 <TARGET> 收交接：<交接路径>`；**仓内 v2.13 用自然角色**：`请【<目标角色>】接单：<交接路径>（<主题>）`，`to_lane=audit` 时附审计动作契约；回执规范/落点在交接「给执行方」节，不进提示词） |
@@ -337,39 +341,48 @@ Agent 发现待处理任务的规范行为：
 
 <!-- handoff-stub:v2.1 begin -->
 <!-- generated — do not edit -->
-<!-- stub:sha256:3b668714 -->
-### Handoff 接入桩（强制守卫 · 细则以 $(lab path handoffs)/README.md 契约 v2.13.0 为准）
+<!-- stub:sha256:179136b9 -->
+### Agent Baton (Handoff) 接入桩（强制守卫 · 细则以 $(lab path handoffs)/README.md 契约 v2.18.0 为准）
 
 **早拦 Preflight（强制）**
-- **命令形态**：一律 \`handoff <op>\`（PATH shim → 中央引擎；幂等自愈 \`handoff link\`）。若报 \`command not found: handoff\`：运行 \`handoff link\` 自愈（或通过 lab-agent-toolkit 重新 \`npm link\`）。
-- 调用 \`show/receipt/accept/reject/check\` 前，**必须先跑** \`handoff status\`（执行方冷启动用 \`handoff status --for <本方 lane|target>\` 直取本方待办）且其输出在上下文中。
-- **状态语义（v2.12.5 ·「进行中」唯一定义，与 README/AGENT-GUIDE 同义）**：「进行中」= 未闭环（\`status ≠ closed\`）且归属当前方。**待办 = \`draft\` + \`forwarded\`**——落我归属即该我动工（含驳回退回的返工单），\`forward\` 只是发起方可选的事后标记，**严禁**用「\`draft\`/\`forwarded\` 不处理」判退（旧桩此条与 README v2.7 直接相悖、且把同仓新单全量拉黑，v2.12.5 废）；\`received\` = 已回执、执行方跳过（发起方收回执=审计）；\`closed\` 不处理；\`accepted\`/\`rejected\` 为废止状态、不存在。
-- 指定 ID 必须在「进行中」且归属当前方（仓内：\`to_lane == 当前 lane\`；跨仓：落在目标收件箱且未闭环）。找不到→停下并说明。
+- **命令形态**：一律 `baton <op>` 或 `handoff <op>`（PATH shim → 中央引擎；幂等自愈 `baton link`）。若报 command not found：运行 `baton link`（或 `handoff link`）自愈（或通过 lab-agent-toolkit 重新 `npm link`）。
+- 调用 `show/receipt/deliver/accept/reject/check` 前，**必须先跑** `baton status`（或 `handoff status`，执行方冷启动用 `baton status --for <本方 lane|target>` 直取本方待办）且其输出在上下文中。
+- **状态语义（v2.18.0 · 五态生命周期）**：「进行中」= 未闭环（`status ≠ closed`）且归属当前方。**待办 = `draft` + `forwarded`**——落我归属即该我动工；`received` = 回执草稿已登记（待执行方交付）；`delivered` = 执行方已完成终态交付（等待发起方验收）；`closed` = 审计闭环完成。
+- **终态交付机制（v2.18.0 · 防抢跑竞态）**：回执文件落盘不等于会话结束。执行方必须通过 `baton deliver <ID>`（或 `baton receipt <ID> --deliver`）显式标记终态交付；未 deliver 之前发起方 wait 探针不唤醒、accept 硬拒闭环。发起方严禁在收到显式交付信号前提前修改 Backlog 或规划文档。
+- 指定 ID 必须在「进行中」且归属当前方（仓内：`to_lane == 当前 lane`；跨仓：落在目标收件箱且未闭环）。找不到→停下并说明。
 - 未指定 ID 却有多条归属当前方的待办（draft/forwarded）→ 列出清单请用户点名，不擅自选。
 - receipt 前确保 status 快照 **< 60 分钟**（超时重跑）。
-- 仓内优先读 frontmatter \`workspace\`（same/separate），禁用 mtime 推断。
-- 执行方**只写 receipt**，**不做 accept/reject**。
-- 回执正文唯一源 = \`$(lab path handoffs)/RESPONSE-TEMPLATE.md\`：**照抄其「回执模板（可直接复制）」骨架**（含「## 转递提示词」节 + evidence 字段），勿另起格式、勿凭记忆重建（骨架外 = 没有）。
-- **evidence 硬门禁（v2.12.3）**：仓内新回执（2026-10-14 起）**必须**附可核验证据 \`--evidence-paths "真实文件,..."\` / \`--evidence-commits "<sha>"\`（无文件改动用 \`--evidence-note "<原因>"\`）；声称的路径须真实存在、提交须 \`git cat-file -e\` 可查，否则 receipt / accept / check 三处拒收。**只声明不改 = 伪回执**（2026-10-13 goods-stores 事故教训）。
-- 收尾必须 \`handoff check\` exit 0（2026-10-13 起回执须「非空正文 + 含 ## 节 + 含『状态 / 结论』锚节 + 含『## 转递提示词』节」；仅 \`COREML-*\` 同工作区侧免转递豁免，仓内 \`workspace=same\` 回执仍须含该节（回执交付行不豁免）；存量豁免）。
-- **回复收尾（v2.11.1）**：凡产出转递提示词，**回复最末块固定为** \`## 转递提示词\`——其下**仅一行**（= \`handoff prompt <ID>\` 输出，或回执那一行），**其后不再有任何正文/结束语**；跨仓 / 仓内（same / separate 均）产出，仅 \`COREML-*\` 同工作区侧免转递豁免。
+- 仓内优先读 frontmatter `workspace`（same/separate），禁用 mtime 推断。
+- 执行方**只写 receipt / deliver**，**不做 accept/reject**。
+- **严禁抢跑/虚假回执**：验收判据**全部实测通过**方可提交回执与交付。执行中途遇阻、环境/多实例冲突或需讨论的中间状态，**仅记录于 reviews/ 或对话说明，严禁提交包含「已通过」的抢跑回执**。
+- 回执正文唯一源 = `$(lab path handoffs)/RESPONSE-TEMPLATE.md`：**照抄其「回执模板（可直接复制）」骨架**（含 evidence 字段），勿另起格式、勿凭记忆重建（骨架外 = 没有）。
+- **evidence 硬门禁（v2.12.3）**：仓内新回执（2026-10-14 起）**必须**附可核验证据 `--evidence-paths "真实文件,..."` / `--evidence-commits "<sha>"`（无文件改动用 `--evidence-note "<原因>"`）；声称的路径须真实存在、提交须 `git cat-file -e` 可查，否则 receipt / deliver / accept / check 拒收。**只声明不改 = 伪回执**（2026-10-13 goods-stores 事故教训）。
+- 收尾必须 `baton check`（或 `handoff check`）exit 0（2026-10-13 起回执须「非空正文 + 含 ## 节 + 含『状态 / 结论』锚节」；存量豁免）。
+- **回复收尾（交接提示词规范）**：发起交接（出站）时，回复最末块**必须固定为交接提示词（由本地 AI 根据用户本地语言自适应呈现：中文使用 `## 交接提示词`，英文使用 `## Baton Pass Prompt`）**。标题、描述说明与具体的接单指令必须严格分离，提示词置于独立代码块（```text）中，方便人类一键复制发给接收方 Agent（其后无任何正文）。执行方交付（入站）后，因发起方已挂起后台探针自动唤醒，无需再写回执提示词。
 - **审计动作契约（v2.13 · to_lane=audit 强制）**：审计方（接收方 to_lane=audit）**严禁仅静态读码**——必须在终端**独立执行**交接文档「验收判据」中的**所有测试与校验命令**，以实测输出为唯一准绳，**严禁采信自报**（执行方回执里的「已通过」一律视为待验证声明，不采信）。其余 lane 亦建议独立实测，但审计 lane 为硬纪律。
-- **仓内提示词用自然角色（v2.13）**：同仓提示词**严禁出现项目名 / lane slug 当角色**（如「请 Tappy 收交接」「请 impl lane 收交接」）。出站 = \`请【<目标角色>】接单：<交接路径>（<主题>）\`；入站回执交付 = \`请【<发起角色>】查收【<本方角色>】回执：<回执路径>（<结论> · 是否需改动：<是/否>）\`。角色由 lane 映射（impl→实现方 / audit→审计方 / arch·design→架构设计方；\`.handoff-hub.json\` 的 \`lane_labels\` 可覆盖）。
-- **防提前闭环（v2.13）**：回执**必须由接收方 to_lane 独立撰写**——发起方（from_lane）禁止自填回执、禁止未收到真实回执前预填；窗口声明 \`HANDOFF_LANE=<本方 lane>\` 后，引擎据身份硬拒越界 / 自填，并在 receipt 落 \`author_lane\`、accept/check 双侧核验。
+- **仓内提示词用自然角色（v2.13）**：同仓提示词**严禁出现项目名 / lane slug 当角色**（如「请 Tappy 收交接」「请 impl lane 收交接」）。出站 = `请【<目标角色>】接单：<交接路径>（<主题>）`。角色由 lane 映射（impl→实现方 / audit→审计方 / arch·design→架构设计方；`.handoff-hub.json` 的 `lane_labels` 可覆盖）。
+- **防提前闭环与双盲审计防伪（v2.16.0）**：回执**必须由接收方 to_lane 独立撰写**——发起方（from_lane）禁止自填回执；`to_lane=audit` 派发时自动签发一次性 `Audit Nonce`，审计回执必须携带 `--audit-nonce "<nonce>"`，硬性拦截同一会话自签；支持 `baton forward --blind` 物理脱敏主观思维链与自辩借口。
 
-**最小操作序列（出站 = 建/发交接）**
-1. \`handoff new <target|lane> <type> "<标题>"\`
-2. \`handoff forward <ID>\`（可选事后标记：跨仓用于审计留痕；仓内 \`workspace=same\` 无转递事件可跳过——执行方照旧按待办动工）
-3. \`handoff prompt <ID>\` → 取输出一行，按「回复收尾」贴在**回复最末块** \`## 转递提示词\` 下，转给接收方（仓内 \`workspace=same\` 免转递，此步跳过）
+**最小操作序列（出站 = 建/发交接 · 强制闭环）**
+1. `baton new <target|lane> <type> "<标题>"`（或 `handoff new ...`）并填写正文
+2. **转递并挂起后台监听（必须执行）**：
+   执行 `baton forward <ID> --wait`（AI 客户端宿主进程树托管；人类终端可用 `--daemon` 脱钩；需双盲脱敏加 `--blind`）
+   ——无论同工作区还是跨工作区，必须启动监听探针；交付完成后探针唤醒进行独立验收闭环。
+3. **输出交接提示词（末块规范）**：本地 AI 根据用户本地语言自适应输出，标题、描述与独立代码块分离（其后无任何正文）：
+   ## 交接提示词
+   > 直接复制下方提示词，发送给接收方 Agent 接单：
+   ```text
+   请【<目标角色>】接单：<交接路径>（<主题>）
+   ```
 
-**最小操作序列（入站 = 接单/回执）**
-1. \`handoff status --for <本方 lane|target>\`（冷启动直取本方待办；全量 \`handoff status\` 供发起方巡检）
-2. 从「待办」（draft/forwarded）筛选归属当前方（仓内 \`to_lane == 当前 lane\`；跨仓 = 落在目标收件箱）→ 确认目标 ID
-3. \`handoff show <ID>\`
+**最小操作序列（入站 = 接单/回执/交付）**
+1. `baton status --for <本方 lane|target>`（冷启动直取本方待办；全量 `baton status` 供发起方巡检）
+2. 从「待办」（draft/forwarded）筛选归属当前方（仓内 `to_lane == 当前 lane`；跨仓 = 落在目标收件箱）→ 确认目标 ID
+3. `baton show <ID>`
 4. 按边界最小改动（仅该 lane 应改文件）
-5. 写回执：**照抄 \`$(lab path handoffs)/RESPONSE-TEMPLATE.md\`「回执模板（可直接复制）」骨架**（含「## 转递提示词」节 + evidence 字段）→ \`handoff receipt <ID> -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"\`（仓内必附 evidence；无文件改动用 \`--evidence-note\`）
-6. \`handoff check\`（exit 0）
-7. **回复收尾（v2.11.1）**：其下一行回执交付行，其后无正文（仅 COREML-* 免转递不写）。仓内 = \`请【<发起角色>】查收【<本方角色>】回执：<回执路径>（<结论> · 是否需改动：<是/否>）\`；跨仓 = \`请收 <本仓> 回执：<回执路径>（…）\`。该行为 \`handoff receipt\` 成功后 CLI **自动打印**，照抄即可。
+5. 实测全过方写回执与交付：**照抄 `$(lab path handoffs)/RESPONSE-TEMPLATE.md` 骨架** → 优先使用 `baton receipt <ID> --deliver -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"`（或分步执行 receipt 后收尾执行 `baton deliver <ID>`）。（若 `to_lane=audit` 须附 `--audit-nonce "<nonce>"`；仓内必附 evidence；无文件改动用 `--evidence-note`；中途受阻仅写 reviews/ 严禁提回执）
+6. `baton check`（exit 0）
+7. **自动唤醒闭环**：执行方 deliver 登记后，发起方后台监听探针将自动 Exit 0 唤醒进行独立验收，无需人工回传回执。
 
-详见 \`$(lab path handoffs)/AGENT-GUIDE.md\` 获取完整版 Preflight。
+详见 `$(lab path handoffs)/AGENT-GUIDE.md` 获取完整版 Preflight。
 <!-- handoff-stub:v2.1 end -->
