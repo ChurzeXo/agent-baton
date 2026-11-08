@@ -7,11 +7,11 @@ CLI 已有 60 分钟新鲜度门禁（receipt/accept/reject 时拦）和 check �
 
 **铁律：在调用任何 handoff 工具前，先确认你刚跑过 `handoff status` 且基于「进行中」清单做判断。**
 
-> **「进行中 / 待办 / 生命周期」唯一定义（v2.18.0 · README / 接入桩 / 本文件三处同义）**
+> **「进行中 / 待办 / 生命周期」唯一定义（v2.19.0 · README / 接入桩 / 本文件三处同义）**
 > - 「进行中」= 未闭环（`status ≠ closed`）且归属当前方。
 > - **待办 = `draft` + `forwarded`**——落我归属即该我动工，**含驳回退回的返工单**；`forward` 只是发起方可选的事后标记，**严禁**用「`draft`/`forwarded` 不处理」判退。
 > - `received` = 回执草稿已登记（执行方可能仍在自检中，尚未交付）。
-> - `delivered` = 执行方已完成终态交付（`delivered_at` 已烙印，触发发起方后台探针唤醒与独立验收）。
+> - `delivered` = 执行方已完成终态交付（`delivered_at` 已烙印，探针进入平息缓冲后唤醒发起方独立验收）。
 > - `closed` 不处理。`accepted`/`rejected` 为废止状态、不存在。
 > - 因此执行方冷启动 = `handoff status --for <本方 lane|target>` 直取本方待办。
 
@@ -35,14 +35,15 @@ CLI 已有 60 分钟新鲜度门禁（receipt/accept/reject 时拦）和 check �
 2. 从「待办」（`draft`/`forwarded`）筛选 `to_lane == 当前 lane`。确认目标 ID（如多条且未指定 → 列出并请用户点名，不擅自选）
 3. `baton show <ID>`
 4. 按边界最小改动（仅该 lane 应改文件）
-5. 写回执与交付：**照抄 `$(lab path handoffs)/RESPONSE-TEMPLATE.md`「回执模板（可直接复制）」骨架** →
-   优先使用一步直达：`baton receipt <ID> --deliver -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"`
-   （或分步执行 `baton receipt`，在自检全过收尾时执行 `baton deliver <ID>`）。（若 `to_lane=audit` 须附 `--audit-nonce "<nonce>"`；无改动用 `--evidence-note`；严禁提前抢跑）
-6. `baton check`（exit 0）
-7. **自动唤醒闭环**：执行方 deliver 登记后，发起方后台监听探针将自动 Exit 0 唤醒进行独立验收，无需人工回传回执。
+5. 写回执：**照抄 `$(lab path handoffs)/RESPONSE-TEMPLATE.md`「回执模板（可直接复制）」骨架** →
+   `baton receipt <ID> -n "<正文>" --evidence-paths "真实文件,..." --evidence-commits "<sha>"`
+   （或原子一步直达：`baton receipt <ID> --deliver -n "..." --evidence-paths "..."`）。（若 `to_lane=audit` 须附 `--audit-nonce "<nonce>"`；无改动用 `--evidence-note`；严禁提前抢跑）
+6. `baton check`（核验证据与锚节合规，exit 0）
+7. **终态交付与会话收尾**：`baton deliver <ID>`（烙印 delivered 并触发平息缓冲，发起方探针平息后 Exit 0 唤醒独立验收；会话收工）。
 
-## 防抢跑与终态交付纪律（v2.18.0 强制）
+## 防抢跑与终态交付平息纪律（v2.19.0 强制）
 - **落盘不等于交付**：回执文件物理落盘不代表执行方会话结束。执行方必须通过 `baton deliver <ID>`（或 `baton receipt --deliver`）显式标记终态交付；
+- **交付后平息缓冲（Settle Window）**：发起方 wait 探针在收到交付信号后，自动静默等待平息缓冲（默认 10s），等待执行方 Agent 会话彻底结束退出后再 Exit 0 唤醒发起方，杜绝毫秒级抢跑；
 - **发起方禁止抢跑**：在未收到 `delivered` 信号前，发起方 wait 探针不会唤醒、accept 硬性拦截；**严禁发起方在收到终态交付信号前提前修改 Backlog 或规划文档**。
 
 ## 强制操作序列（出站 = 建/发交接 · 强制闭环）

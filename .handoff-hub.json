@@ -1,20 +1,24 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "agent-baton-hub",
+  "name": "lab-handoff-hub",
   "version": "2.16.0",
   "mode": "cross",
-  "description": "Central Baton Hub for cross-repo and intra-repo agent coordination",
+  "description": "Central Handoff Hub for cross-repo and intra-repo coordination",
   "targets": [
-    "frontend",
-    "backend",
-    "mobile",
-    "audit"
+    "swoop",
+    "prospero",
+    "iggle",
+    "coreml",
+    "tappy",
+    "yiqiyihuihua"
   ],
   "target_labels": {
-    "frontend": "Frontend Web",
-    "backend": "Backend API",
-    "mobile": "Mobile Client",
-    "audit": "Security & Audit"
+    "swoop": "Swoop",
+    "prospero": "Prospero",
+    "iggle": "iggle",
+    "coreml": "iggle-coreml",
+    "tappy": "Tappy",
+    "yiqiyihuihua": "一期一卉花"
   },
   "lane_roles": {
     "impl": "实现方",

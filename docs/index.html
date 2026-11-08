@@ -310,29 +310,11 @@
     .compat-list span:last-child::after { display: none; }
     .compat-list span:last-child { color: var(--fg-3); font-weight: 500; }
 
-    /* ── Section 01: Pipeline ──────────────────────────────────── */
-    .pipeline-head {
-      display: flex; align-items: flex-end; justify-content: space-between;
-      gap: 32px; flex-wrap: wrap;
-    }
-    .segmented {
-      display: inline-flex; align-items: center; gap: 3px;
-      padding: 4px; background: var(--surface);
-      border: 1px solid var(--line-2); border-radius: 10px;
-    }
-    .seg-btn {
-      font-family: var(--mono); font-size: 10.5px; font-weight: 600;
-      color: var(--fg-3); padding: 7px 12px; border-radius: 7px;
-      transition: all .2s; white-space: nowrap;
-    }
-    .seg-btn:hover { color: var(--fg); }
-    .seg-btn.is-active { background: var(--accent); color: var(--accent-ink); }
-    .flow-label { font-family: var(--mono); font-size: 10px; color: var(--fg-3); letter-spacing: .1em; margin-right: 4px; }
-
-    /* ── Section 01: Interactive architecture diagram ─────────── */
+    /* ── Section 01: Architecture diagram ─────────────────────── */
     .diagram {
       margin-top: 44px;
-      border: 1px solid var(--line-2); border-radius: 14px;
+      border: 1px solid var(--line-2); border-bottom: 0;
+      border-radius: 14px 14px 0 0;
       background: var(--inset); overflow: hidden;
     }
     .diagram-bar {
@@ -374,8 +356,6 @@
     }
     .dnode:hover .dn-box { stroke: var(--accent-line); }
     .dnode.is-active .dn-box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; }
-    .dnode .dn-bar { fill: var(--accent); opacity: 0; transition: opacity .35s; }
-    .dnode.is-active .dn-bar { opacity: 1; }
     .dn-num { fill: var(--fg-3); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; transition: fill .35s; }
     .dnode.is-active .dn-num { fill: var(--accent); }
     .dn-title { fill: var(--fg); font-family: var(--mono); font-size: 13px; font-weight: 600; }
@@ -391,45 +371,114 @@
     .dpulse { fill: var(--accent); }
     .dpulse--soft { fill: var(--accent); opacity: .16; }
 
-    /* Detail panel — one of four, driven by the active stage */
-    .dd-wrap {
-      margin-top: 18px; border: 1px solid var(--line-2);
-      border-radius: 12px; background: var(--surface); overflow: hidden;
+    /* Four always-visible stages — part of ONE continuous flow canvas */
+    .fgrid {
+      position: relative; display: grid; grid-template-columns: repeat(4, 1fr);
+      border: 1px solid var(--line-2); border-bottom: 0; border-top-color: var(--line);
+      background: var(--inset);
     }
-    .dd-panel { display: none; }
-    .dd-panel.is-active { display: block; animation: ddfade .35s ease; }
-    @keyframes ddfade { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
-    .dd-head { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
-    .dd-num { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: -.04em; }
-    .dd-title { font-family: var(--mono); font-size: 13.5px; font-weight: 600; margin: 0; }
-    .dd-sub { font-size: 12.5px; color: var(--fg-3); margin: 3px 0 0; }
-    .dd-tag {
-      margin-left: auto; font-family: var(--mono); font-size: 9.5px;
-      color: var(--fg-3); border: 1px solid var(--line-2);
-      padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+    .fgrid::before {
+      content: ''; position: absolute; top: 14px; left: 0; right: 0;
+      height: 1px; background: var(--line-2); pointer-events: none;
     }
-    .dd-points { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; margin: 0; padding: 0; }
-    .dd-points li { padding: 20px 24px; border-right: 1px solid var(--line); }
-    .dd-points li:last-child { border-right: 0; }
+    .fscan {
+      position: absolute; top: 13px; left: 0; width: 20%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: .7; pointer-events: none;
+      animation: fscan 8.4s linear infinite;
+    }
+    @keyframes fscan { from { transform: translateX(-100%) } to { transform: translateX(500%) } }
+    .fstage {
+      position: relative; padding: 36px 20px 22px;
+      border-right: 1px solid var(--line);
+      transition: background .4s ease; cursor: pointer;
+    }
+    .fstage:last-child { border-right: 0; }
+    .fstage::before {
+      content: ''; position: absolute; top: 10px; left: 20px; z-index: 2;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--inset); border: 1px solid var(--line-2);
+      transition: background .4s, border-color .4s, box-shadow .4s;
+    }
+    .fstage:not(:last-child)::after {
+      content: ''; position: absolute; right: -4px; top: 11px; z-index: 2;
+      width: 0; height: 0;
+      border-left: 5px solid var(--line-2);
+      border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+    }
+    .fstage.is-current { background: linear-gradient(180deg, var(--accent-soft), transparent 62%); }
+    .fstage.is-current::before {
+      background: var(--accent); border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+    .fstage-head { display: flex; align-items: baseline; gap: 10px; }
+    .fstage-num {
+      font-family: var(--mono); font-size: 24px; font-weight: 600;
+      color: var(--fg-3); letter-spacing: -.04em; transition: color .4s;
+    }
+    .fstage.is-current .fstage-num { color: var(--accent); }
+    .fstage-title {
+      font-family: var(--mono); font-size: 12px; font-weight: 600;
+      margin: 0; letter-spacing: .01em; line-height: 1.5;
+    }
+    .fstage-sub { font-size: 11.5px; color: var(--fg-3); margin: 2px 0 0; }
+    .fstage-tag {
+      display: inline-block; margin-top: 14px;
+      font-family: var(--mono); font-size: 9px; color: var(--fg-3);
+      border: 1px solid var(--line-2); padding: 3px 7px; border-radius: 5px;
+      word-break: break-all;
+    }
+    .fstage.is-current .fstage-tag { color: var(--accent); border-color: var(--accent-line); }
+    .fstage-points { list-style: none; margin: 16px 0 0; padding: 0; }
+    .fstage-points li { padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .fstage-points li:last-child { border-bottom: 0; padding-bottom: 0; }
     .pt-title { font-size: 12px; font-weight: 700; color: var(--fg); margin-bottom: 4px; }
     .pt-desc { font-size: 11px; line-height: 1.7; color: var(--fg-3); }
 
-    /* Live console */
-    .console {
-      margin-top: 20px; display: flex; align-items: center; justify-content: space-between;
-      gap: 20px; padding: 20px 22px;
-      background: var(--inset); border: 1px solid var(--line-2); border-radius: 12px;
-      font-family: var(--mono); font-size: 11.5px; min-height: 92px;
+    /* Runtime trace — all four lines stay on screen; only the highlight moves */
+    .ftrace {
+      position: relative;
+      border: 1px solid var(--line-2); border-top-color: var(--line);
+      border-radius: 0 0 14px 14px;
+      background: var(--surface); padding: 16px 22px 18px;
+      font-family: var(--mono);
     }
-    .console-main { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
-    .console-caret { color: var(--accent); font-size: 17px; font-weight: 700; line-height: 1.1; }
-    #flow-log { color: var(--fg-2); line-height: 1.8; word-break: break-word; }
+    .ftrace-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      font-size: 9.5px; letter-spacing: .08em; color: var(--fg-3); margin-bottom: 10px;
+    }
+    #probe-metric { color: var(--accent); font-weight: 600; font-size: 10.5px; }
+    .ftrace-lines { display: grid; gap: 2px; }
+    .flog-line {
+      display: flex; gap: 12px; padding: 6px 10px;
+      border-left: 2px solid transparent; border-radius: 0 5px 5px 0;
+      font-size: 10.5px; line-height: 1.65; color: var(--fg-2);
+      opacity: .5; transition: opacity .35s, background .35s, border-color .35s;
+    }
+    .flog-line.is-current { opacity: 1; border-left-color: var(--accent); background: var(--accent-soft); }
+    .flog-idx { color: var(--fg-3); flex-shrink: 0; }
+    .flog-main { min-width: 0; word-break: break-word; }
     .log-tag { color: var(--accent); font-weight: 600; }
     .log-cmd { color: var(--fg); }
     .log-note { color: var(--fg-3); }
     .log-ok { color: var(--accent); font-weight: 600; }
-    .console-side { text-align: right; flex-shrink: 0; color: var(--fg-3); font-size: 9.5px; letter-spacing: .08em; line-height: 2; }
-    #probe-metric { color: var(--accent); font-weight: 600; display: block; font-size: 11px; }
+    .console-progress {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+      background: var(--line); pointer-events: none;
+    }
+    .console-progress-fill {
+      display: block; height: 100%; background: var(--accent); opacity: .55;
+      transform: scaleX(0); transform-origin: left;
+    }
+    .console-progress.is-running .console-progress-fill { animation: conprogress 4.2s linear forwards; }
+    @keyframes conprogress { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fscan, .dedge.is-active, .dnode.is-active .dn-halo,
+      .diagram-bar .live::before, .console-progress.is-running .console-progress-fill { animation: none; }
+      .console-progress-fill { transform: scaleX(1); }
+      .fstage, .fstage::before, .fstage-num, .flog-line { transition: none; }
+    }
 
     /* ── Section 02: Problem / defense rows ────────────────────── */
     .rows { border-top: 1px solid var(--line); }
@@ -592,7 +641,11 @@
       .hero-lead { max-width: 620px; }
       .terminal { max-width: 560px; }
       .diagram-svg { min-width: 700px; }
-      .dd-points { grid-template-columns: repeat(3, 1fr); }
+      .fgrid { grid-template-columns: repeat(2, 1fr); }
+      .fgrid::before, .fscan, .fstage::before, .fstage:not(:last-child)::after { display: none; }
+      .fstage { padding: 22px 20px; border-bottom: 1px solid var(--line); }
+      .fstage:nth-child(2n) { border-right: 0; }
+      .fstage:nth-last-child(-n+2) { border-bottom: 0; }
       .tl-step { grid-template-columns: 52px 1fr; gap: 16px 20px; align-items: start; }
       .codeblock { grid-column: 2; }
       .tl-num::after { display: none; }
@@ -617,15 +670,26 @@
       .compat-list span { gap: 12px; }
       .diagram-svg { min-width: 720px; }
       .diagram-hint { display: block; padding: 0 18px 12px; font-family: var(--mono); font-size: 9.5px; color: var(--fg-3); }
-      .dd-head { flex-wrap: wrap; gap: 10px; padding: 18px; }
-      .dd-tag { margin-left: 0; }
-      .dd-points { grid-template-columns: 1fr; }
-      .dd-points li { border-right: 0; border-bottom: 1px solid var(--line); padding: 16px 18px; }
-      .dd-points li:last-child { border-bottom: 0; }
-      .segmented { width: 100%; overflow-x: auto; }
-      .flow-label { display: none; }
-      .console { flex-direction: column; align-items: flex-start; }
-      .console-side { text-align: left; }
+      .fgrid { grid-template-columns: 1fr; }
+      .fgrid::before {
+        display: block; left: 27px; right: auto; top: 20px; bottom: 20px;
+        width: 1px; height: auto;
+      }
+      .fscan { display: none; }
+      .fstage {
+        padding: 18px 18px 18px 46px; border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .fstage:nth-last-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .fstage:last-child { border-bottom: 0; }
+      .fstage::before { display: block; top: 22px; left: 23px; }
+      .fstage:not(:last-child)::after {
+        display: block; right: auto; left: 24px; top: auto; bottom: -4px;
+        border-left: 4px solid transparent; border-right: 4px solid transparent;
+        border-top: 5px solid var(--line-2); border-bottom: 0;
+      }
+      .ftrace { padding: 14px 16px 16px; }
+      .flog-line { font-size: 10px; gap: 8px; padding: 6px 8px; }
       .row { grid-template-columns: 1fr; gap: 14px; }
       .row-icon { margin-bottom: 2px; }
       .proof { grid-column: 1; }
@@ -765,19 +829,10 @@
     <!-- ══ 01 Architecture / Pipeline ══════════════════════════ -->
     <section class="section" id="architecture">
       <div class="container">
-        <div class="pipeline-head reveal">
-          <div class="section-head" style="margin-bottom:0">
-            <span class="eyebrow">01 / Architecture</span>
-            <h2 data-i18n="arch-title">一条协议链路，四个可验证阶段</h2>
-            <p data-i18n="diagram-title">THE INTERNALS OF AGENT BATON · 运行态全景图。从契约声明到实证回执，每一步都有机器可核验的物理边界。</p>
-          </div>
-          <div class="segmented" role="group" aria-label="流程阶段">
-            <span class="flow-label" data-i18n="phase-text">FLOW:</span>
-            <button class="seg-btn is-active" onclick="setDiagramStage(0)">1 REQUEST</button>
-            <button class="seg-btn" onclick="setDiagramStage(1)">2 ASYNC SLEEP</button>
-            <button class="seg-btn" onclick="setDiagramStage(2)">3 RESPONSE</button>
-            <button class="seg-btn" onclick="setDiagramStage(3)">4 CALLBACK</button>
-          </div>
+        <div class="section-head reveal" style="margin-bottom:0">
+          <span class="eyebrow">01 / Architecture</span>
+          <h2 data-i18n="arch-title">一条协议链路，四个可验证阶段</h2>
+          <p data-i18n="diagram-title">THE INTERNALS OF AGENT BATON · 运行态全景图。从契约声明到实证回执，每一步都有机器可核验的物理边界。</p>
         </div>
 
         <div class="diagram reveal">
@@ -825,7 +880,6 @@
               <g class="dnode is-active" id="dn0" data-stage="0">
                 <rect class="dn-halo" x="40" y="90" width="210" height="96" rx="10"/>
                 <rect class="dn-box" x="40" y="90" width="210" height="96" rx="10"/>
-                <rect class="dn-bar" x="58" y="92" width="174" height="2"/>
                 <text class="dn-num" x="58" y="114">01 / REQUEST</text>
                 <text class="dn-title" x="58" y="140">CALLER LANE</text>
                 <text class="dn-desc" x="58" y="162">POST /handoffs/new</text>
@@ -833,7 +887,6 @@
               <g class="dnode" id="dn1" data-stage="1">
                 <rect class="dn-halo" x="300" y="90" width="210" height="96" rx="10"/>
                 <rect class="dn-box" x="300" y="90" width="210" height="96" rx="10"/>
-                <rect class="dn-bar" x="318" y="92" width="174" height="2"/>
                 <text class="dn-num" x="318" y="114">02 / ASYNC SLEEP</text>
                 <text class="dn-title" x="318" y="140">ZERO-TRUST GATEWAY</text>
                 <text class="dn-desc" x="318" y="162">fs.watch · 0 Token</text>
@@ -841,7 +894,6 @@
               <g class="dnode" id="dn2" data-stage="2">
                 <rect class="dn-halo" x="560" y="90" width="210" height="96" rx="10"/>
                 <rect class="dn-box" x="560" y="90" width="210" height="96" rx="10"/>
-                <rect class="dn-bar" x="578" y="92" width="174" height="2"/>
                 <text class="dn-num" x="578" y="114">03 / RESPONSE</text>
                 <text class="dn-title" x="578" y="140">WORKER LANE</text>
                 <text class="dn-desc" x="578" y="162">git commit · SHA</text>
@@ -849,7 +901,6 @@
               <g class="dnode" id="dn3" data-stage="3">
                 <rect class="dn-halo" x="820" y="90" width="210" height="96" rx="10"/>
                 <rect class="dn-box" x="820" y="90" width="210" height="96" rx="10"/>
-                <rect class="dn-bar" x="838" y="92" width="174" height="2"/>
                 <text class="dn-num" x="838" y="114">04 / CALLBACK</text>
                 <text class="dn-title" x="838" y="140">CLOSED &amp; VERIFIED</text>
                 <text class="dn-desc" x="838" y="162">200 OK · Closed</text>
@@ -866,69 +917,69 @@
           <p class="diagram-hint" data-i18n="diagram-hint">← 左右滑动查看完整链路 →</p>
         </div>
 
-        <div class="dd-wrap reveal">
-          <div class="dd-panel is-active" id="arch-caller">
-            <div class="dd-head">
-              <span class="dd-num">01</span>
-              <div><h3 class="dd-title">CALLER LANE</h3><p class="dd-sub" data-i18n="st1-t">发起端 · 契约声明</p></div>
-              <span class="dd-tag">POST /handoffs/new</span>
+        <div class="fgrid" id="fgrid">
+          <span class="fscan"></span>
+
+          <article class="fstage is-current" id="fstage-0" data-stage="0">
+            <div class="fstage-head">
+              <span class="fstage-num">01</span>
+              <div><h3 class="fstage-title">CALLER LANE</h3><p class="fstage-sub" data-i18n="st1-t">发起端 · 契约声明</p></div>
             </div>
-            <ul class="dd-points">
+            <span class="fstage-tag">POST /handoffs/new</span>
+            <ul class="fstage-points">
               <li><div class="pt-title" data-i18n="spec-title">Task Specification</div><div class="pt-desc" data-i18n="spec-desc">定义客观机器判据与修改边界，拒绝模糊自然语言</div></li>
               <li><div class="pt-title">baton new &lt;lane&gt; &lt;type&gt;</div><div class="pt-desc" data-i18n="ticket-desc">自动落盘 Markdown 票据，注入前后置事实源</div></li>
               <li><div class="pt-title">Double-Blind (--blind)</div><div class="pt-desc" data-i18n="blind-desc">物理脱敏 &lt;thinking&gt; 思维链，杜绝顺从偏见</div></li>
             </ul>
-          </div>
+          </article>
 
-          <div class="dd-panel" id="arch-gateway">
-            <div class="dd-head">
-              <span class="dd-num">02</span>
-              <div><h3 class="dd-title">ZERO-TRUST GATEWAY</h3><p class="dd-sub" data-i18n="st2-t">零信任网关与事件中枢</p></div>
-              <span class="dd-tag">OS fs.watch · 0-Token Sleeping</span>
+          <article class="fstage" id="fstage-1" data-stage="1">
+            <div class="fstage-head">
+              <span class="fstage-num">02</span>
+              <div><h3 class="fstage-title">ZERO-TRUST GATEWAY</h3><p class="fstage-sub" data-i18n="st2-t">零信任网关与事件中枢</p></div>
             </div>
-            <ul class="dd-points">
+            <span class="fstage-tag">OS fs.watch · 0-Token Sleeping</span>
+            <ul class="fstage-points">
               <li><div class="pt-title">Audit Nonce</div><div class="pt-desc" data-i18n="nonce-desc">派单时签发高熵一次性随机令牌，强制审计回执核销，拦截同一会话自导自演自签。</div></li>
               <li><div class="pt-title">0-Token 探针</div><div class="pt-desc" data-i18n="sleeper-desc"><code>baton forward --wait</code> 挂载内核文件事件，发起端静默休眠，零 Token 消耗零发热。</div></li>
               <li><div class="pt-title">Evidence 判据菱形</div><div class="pt-desc" data-i18n="gate-desc">运行 <code>git cat-file -e</code> 核验真实 Commit SHA 与变动文件；虚假回执直接硬拦截拒收！</div></li>
             </ul>
-          </div>
+          </article>
 
-          <div class="dd-panel" id="arch-worker">
-            <div class="dd-head">
-              <span class="dd-num">03</span>
-              <div><h3 class="dd-title">WORKER LANE</h3><p class="dd-sub" data-i18n="st3-t">执行工作台 · 独立实测</p></div>
-              <span class="dd-tag">Work Queue</span>
+          <article class="fstage" id="fstage-2" data-stage="2">
+            <div class="fstage-head">
+              <span class="fstage-num">03</span>
+              <div><h3 class="fstage-title">WORKER LANE</h3><p class="fstage-sub" data-i18n="st3-t">执行工作台 · 独立实测</p></div>
             </div>
-            <ul class="dd-points">
+            <span class="fstage-tag">Work Queue</span>
+            <ul class="fstage-points">
               <li><div class="pt-title" data-i18n="w1-t">直取角色待办</div><div class="pt-desc" data-i18n="w1-d">过滤并认领归属当前 Lane 的任务单 <code>baton status --for</code></div></li>
               <li><div class="pt-title" data-i18n="w2-t">终端独立实测</div><div class="pt-desc" data-i18n="w2-d">严禁信口开河自报，以终端命令运行结果为准</div></li>
               <li><div class="pt-title" data-i18n="w3-t">提交代码生成 SHA</div><div class="pt-desc" data-i18n="w3-d">产生不可伪造的真实 Git Commit</div></li>
             </ul>
-          </div>
+          </article>
 
-          <div class="dd-panel" id="arch-deliver">
-            <div class="dd-head">
-              <span class="dd-num">04</span>
-              <div><h3 class="dd-title">CLOSED &amp; VERIFIED</h3><p class="dd-sub" data-i18n="st4-t">无损交付闭环</p></div>
-              <span class="dd-tag">200 OK Callback</span>
+          <article class="fstage" id="fstage-3" data-stage="3">
+            <div class="fstage-head">
+              <span class="fstage-num">04</span>
+              <div><h3 class="fstage-title">CLOSED &amp; VERIFIED</h3><p class="fstage-sub" data-i18n="st4-t">无损交付闭环</p></div>
             </div>
-            <ul class="dd-points">
+            <span class="fstage-tag">200 OK Callback</span>
+            <ul class="fstage-points">
               <li><div class="pt-title" data-i18n="d1-t">真实证据回执单</div><div class="pt-desc" data-i18n="d1-d">附带 Commit、变更文件路径与 Audit Nonce</div></li>
               <li><div class="pt-title" data-i18n="d2-t">毫秒响应式自动唤醒</div><div class="pt-desc" data-i18n="d2-d">底层探测回执就绪，发起方会话自动苏醒</div></li>
               <li><div class="pt-title" data-i18n="d3-t">一键复核合入</div><div class="pt-desc" data-i18n="d3-d">核对验收标准，状态翻转为 Closed 归档</div></li>
             </ul>
-          </div>
+          </article>
         </div>
 
-        <div class="console reveal">
-          <div class="console-main">
-            <span class="console-caret">&gt;</span>
-            <div id="flow-log"></div>
-          </div>
-          <div class="console-side">
-            <span>PROTOCOL: API_HANDOFF</span>
+        <div class="ftrace" id="ftrace">
+          <div class="ftrace-bar">
+            <span>RUNTIME TRACE · API_HANDOFF</span>
             <span id="probe-metric">READY</span>
           </div>
+          <div class="ftrace-lines" id="ftrace-lines"></div>
+          <span class="console-progress" id="console-progress"><span class="console-progress-fill"></span></span>
         </div>
       </div>
     </section>
@@ -1150,7 +1201,6 @@
         'desc-hero': '一条命令穿透仓库边界，契约对齐、双盲审计、事件驱动闭环。拒绝人肉传话与上下文衰减。',
         'arch-title': '一条协议链路，四个可验证阶段',
         'diagram-title': 'THE INTERNALS OF AGENT BATON · 运行态全景图。从契约声明到实证回执，每一步都有机器可核验的物理边界。',
-        'phase-text': 'FLOW:',
         'diagram-hint': '← 左右滑动查看完整链路 →',
         'st1-t': '发起端 · 契约声明', 'st2-t': '零信任网关与事件中枢', 'st3-t': '执行工作台 · 独立实测', 'st4-t': '无损交付闭环',
         'spec-title': 'Task Specification', 'spec-desc': '定义客观机器判据与修改边界，拒绝模糊自然语言',
@@ -1208,7 +1258,6 @@
         'desc-hero': 'One command crosses repo boundaries. Aligned contracts, double-blind audits, event-driven closure. No context rot.',
         'arch-title': 'One protocol chain, four verifiable stages',
         'diagram-title': 'THE INTERNALS OF AGENT BATON · A runtime overview. From contract declaration to evidence-backed receipts, every step has a machine-verifiable boundary.',
-        'phase-text': 'FLOW:',
         'diagram-hint': '← Swipe horizontally to explore →',
         'st1-t': 'Caller lane · contract declaration', 'st2-t': 'Zero-trust gateway & event bus', 'st3-t': 'Worker lane · independent testing', 'st4-t': 'Lossless delivery loop closed',
         'spec-title': 'Task Specification', 'spec-desc': 'Defines objective acceptance criteria and strict scopes, refusing fuzzy prompts',
@@ -1258,28 +1307,28 @@
       }
     };
 
-    /* ── Interactive pipeline ──────────────────────────────────── */
+    /* ── Section 01: flow canvas · all four stages always visible ── */
     let currentDiagramStage = 0;
     let diagramTimer = null;
 
     const diagramStages = [
       {
-        activeBoxId: 'arch-caller', metric: 'POST /handoffs/new',
+        metric: 'POST /handoffs/new',
         logZh: `<span class="log-tag">[1. REQUEST 发起]</span> <span class="log-cmd">baton new audit task "重构认证鉴权"</span><br><span class="log-note">已生成结构化交接单，列明客观验收判据与修改边界。</span>`,
         logEn: `<span class="log-tag">[1. REQUEST]</span> <span class="log-cmd">baton new audit task "Refactor Auth Subsystem"</span><br><span class="log-note">Created structured contract ticket with machine-verifiable acceptance criteria.</span>`
       },
       {
-        activeBoxId: 'arch-gateway', metric: 'ASYNC_SLEEP (0 Token)',
+        metric: 'ASYNC_SLEEP (0 Token)',
         logZh: `<span class="log-tag">[2. ASYNC SLEEP 挂起]</span> <span class="log-cmd">baton forward --daemon --blind</span><br><span class="log-note">脱敏思维链 &amp; 签发 Audit Nonce。主进程脱壳秒退，后台 0 Token 深度待机。</span>`,
         logEn: `<span class="log-tag">[2. ASYNC SLEEP]</span> <span class="log-cmd">baton forward --daemon --blind</span><br><span class="log-note">Sanitized thinking chain &amp; issued Nonce. Main CLI exited; background sleeps at 0 Token.</span>`
       },
       {
-        activeBoxId: 'arch-worker', metric: 'EVIDENCE_VERIFY',
+        metric: 'EVIDENCE_VERIFY',
         logZh: `<span class="log-tag">[3. RESPONSE 交付]</span> <span class="log-cmd">baton receipt --evidence-paths "..." --audit-nonce "..."</span><br><span class="log-note">审查方终端实测通过，提交真实 Git Commit SHA 与修改路径，底层核验通过！</span>`,
         logEn: `<span class="log-tag">[3. RESPONSE]</span> <span class="log-cmd">baton receipt --evidence-paths "..." --audit-nonce "..."</span><br><span class="log-note">Worker tested via terminal, submitted real Git Commit SHA. Verified on disk!</span>`
       },
       {
-        activeBoxId: 'arch-deliver', metric: 'CALLBACK_WAKEN',
+        metric: 'CALLBACK_WAKEN',
         logZh: `<span class="log-tag">[4. CALLBACK 唤醒闭环]</span> <span class="log-ok">内核事件触发，发起方瞬间唤醒！</span><br><span class="log-note">执行 baton accept 完成复核，交接单状态翻转为 Closed 闭环归档。</span>`,
         logEn: `<span class="log-tag">[4. CALLBACK]</span> <span class="log-ok">OS event triggered. Author AI awakens instantly!</span><br><span class="log-note">Runs baton accept. Task status closed and verified.</span>`
       }
@@ -1292,15 +1341,24 @@
       ['de3', 'dewake']
     ];
 
+    // Render all four trace lines once (rebuilt only when the language changes)
+    function renderFlowLog() {
+      const wrap = document.getElementById('ftrace-lines');
+      if (!wrap) return;
+      wrap.innerHTML = diagramStages.map((d, i) =>
+        `<div class="flog-line${i === currentDiagramStage ? ' is-current' : ''}" data-stage="${i}">` +
+        `<span class="flog-idx">0${i + 1}</span>` +
+        `<div class="flog-main">${isZh ? d.logZh : d.logEn}</div></div>`
+      ).join('');
+    }
+
     function setDiagramStage(idx) {
       currentDiagramStage = idx;
       const data = diagramStages[idx];
 
-      // Detail panels
-      ['arch-caller', 'arch-gateway', 'arch-worker', 'arch-deliver'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.toggle('is-active', id === data.activeBoxId);
-      });
+      // All four stages stay visible at all times — only the highlight moves
+      document.querySelectorAll('.fstage').forEach((el, i) => el.classList.toggle('is-current', i === idx));
+      document.querySelectorAll('.flog-line').forEach((el, i) => el.classList.toggle('is-current', i === idx));
 
       // Diagram nodes, edges and the evidence gate
       document.querySelectorAll('.dnode').forEach((node, i) => {
@@ -1313,12 +1371,17 @@
       const gate = document.getElementById('dgate');
       if (gate) gate.classList.toggle('is-active', idx === 2 || idx === 3);
 
-      document.querySelectorAll('.seg-btn').forEach((p, i) => {
-        p.classList.toggle('is-active', i === idx);
-      });
-
       document.getElementById('probe-metric').textContent = data.metric;
-      document.getElementById('flow-log').innerHTML = isZh ? data.logZh : data.logEn;
+      restartStageMotion();
+    }
+
+    function restartStageMotion() {
+      const progress = document.getElementById('console-progress');
+      if (progress) {
+        progress.classList.remove('is-running');
+        void progress.offsetWidth;
+        progress.classList.add('is-running');
+      }
     }
 
     function startDiagramLoop() {
@@ -1329,15 +1392,13 @@
       }, 4200);
     }
 
-    // Click a node in the diagram to jump to that stage
-    document.querySelectorAll('.dnode').forEach(node => {
-      node.addEventListener('click', () => {
-        setDiagramStage(Number(node.getAttribute('data-stage')));
+    // Click a node or a stage column to move the highlight there.
+    // Nothing is ever hidden — this only repositions the focus.
+    document.querySelectorAll('.dnode, .fstage').forEach(el => {
+      el.addEventListener('click', () => {
+        setDiagramStage(Number(el.getAttribute('data-stage')));
         startDiagramLoop();
       });
-    });
-    document.querySelectorAll('.seg-btn').forEach(p => {
-      p.addEventListener('click', startDiagramLoop);
     });
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -1345,6 +1406,7 @@
       if (svg && svg.pauseAnimations) svg.pauseAnimations();
     }
 
+    renderFlowLog();
     setDiagramStage(0);
     startDiagramLoop();
 
@@ -1386,6 +1448,7 @@
         const k = el.getAttribute('data-i18n');
         if (dict[k]) el.innerHTML = dict[k];
       });
+      renderFlowLog();
       setDiagramStage(currentDiagramStage);
     });
 

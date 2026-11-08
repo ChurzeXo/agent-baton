@@ -1,4 +1,4 @@
-# Runtime data directories
+# Runtime data directories (严格隔离运行态票据与回执)
 handoffs/
 receipts/
 inbox/
@@ -9,13 +9,16 @@ reviews/
 .audit-challenges.json
 .handoff-worktrees/
 
+# Local Hub Configuration (由用户在项目内自定义，不作为库代码打包)
+.handoff-hub.json
+
 # Dependencies
 node_modules/
 package-lock.json
 *.tgz
 *.zip
 
-# OS / Editor files
+# OS & Editor files
 .DS_Store
 Thumbs.db
 .idea/
