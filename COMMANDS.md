@@ -149,3 +149,13 @@ Self-healing command to ensure `baton`, `agent-baton`, and `handoff` shims exist
 ```bash
 baton link [--remove]
 ```
+
+### `baton throttle`
+Run background execution tasks with a three-tier noise-filtering pipeline to protect agent and human attention.
+```bash
+baton throttle <id> [--quiet] [--timeout <ms>] -- <command>
+```
+*Tiers*:
+- Green: Regular output stream quietly written to `.handoffs/logs/<id>.throttle.log`.
+- Yellow: Warnings, rate limits and retries tracked with summary counters.
+- Red: Fatal runtime crashes immediately breach the filter and alert the parent agent.

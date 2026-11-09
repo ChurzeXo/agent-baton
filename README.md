@@ -4,7 +4,8 @@
 > 拒绝人肉传话与上下文衰减。一条命令穿透仓库边界，接口与协作契约严密对齐，独立窗口双盲审计，事件驱动无感闭环。  
 > 本地中立的交接枢纽，被 **iggle / Swoop / Prospero / Tappy / 一期一卉花** 与**自动化运营**共用。
 > 不属于任何代码仓库；交接不出 iggle 仓库、回执不进 iggle 仓库（仍守 `AGENTS.md` 协作边界：依赖 agent 绝不改 iggle 文件）。
-> **契约版本 v2.20.0（2026-11-08）**：本文件是交接契约的**唯一真相源**——所有行为规则、命名规范、状态机只以这里为准；各仓库 AGENTS.md / 记忆文件只允许放指针桩，禁止复制细则（防漂移）。修改契约必须改本文件并升版本号。
+> **契约版本 v2.21.0（2026-11-09）**：本文件是交接契约的**唯一真相源**——所有行为规则、命名规范、状态机只以这里为准；各仓库 AGENTS.md / 记忆文件只允许放指针桩，禁止复制细则（防漂移）。修改契约必须改本文件并升版本号。
+> **v2.21.0 变更（2026-11-09 · 原生支持 Workspace Driver 钩子与 `workspace: worktree` 物理隔离 · 微内核解耦驱动挂载 · ADR-0003）**：动因——多 Agent 在同项目并发修改容易造成主工作区 Git 冲突、撤销污染与上下文幻觉；同时为保证 Handoff 独立开源轻量中立性，采用微内核 + 可插拔 Workspace Driver 架构。①**工单原生支持 `workspace: worktree`**：`baton new` 支持 `--workspace worktree`（或 `.handoff-hub.json` 配置 `workspace_default: "worktree"`）；②**Workspace Driver 抽象与生命周期钩子**：`baton forward` 自动探测驱动并调用分配（`allocate`）专属物理工作树与依赖缓存共享；`baton close` 支持 `--prune-worktree` 安全清理与分支回收；③**提示词环境隔离感知**：`baton prompt` 自适应生成指引执行方在隔离工作树接单的标准提示词；④**零依赖优雅降级**：独立开源用户在未安装驱动时，安全提示降级为常规分支操作，核心保持 0 生产依赖与跨平台兼容。
 > **v2.20.0 变更（2026-11-08 · 多工单聚合等待与轻量级 Pub/Sub 监听 · 支持 baton wait <id1> [id2 ...] [--any|--all] · 解决多实例并行交接阻塞失配 · 动 STUB_BODY ⇒ 各载体须重跑 baton install）**：动因——用户与多 Agent 并行协作反馈：当发起方拆解或派发多份并发交接任务（如多 Lane 协同、多模块并行实现或实现+审计双流派发）时，若为每个 ID 派生独立 wait 进程，不仅竞争系统资源并产生多进程争抢，更会导致外层 AI 宿主（如 Antigravity / Claude Code / Cursor）的任务调度器面临“哪个先退出、哪个先唤醒”的失配难题；若引入常驻 Pub/Sub Daemon，又会导致进程孤儿化与基础设施过度重量化。①**轻量级进程内聚合等待（In-Process Lightweight Pub/Sub）**：`cmdWait` 原生支持一次性传入多个工单 ID（`baton wait <id1> <id2> ...`），在单一 Node.js 进程内复用 OS 文件系统内核级事件流（`fs.watch`），实现 0 额外守护、0 复杂中介、毫秒级感知的多路复用监听；②**双模聚合判定（Race vs. Join）**：默认 `--all`（Join 模式），等待全部目标工单全量交付后再统一启动平息缓冲并 Exit 0 唤醒发起方；支持 `--any`（Race 模式），任意一个目标工单完成交付即刻平息并唤醒；③**会话平息与聚合状态诊断**：平息缓冲期（Settle Window）动态覆盖全部关联工单，超时时打印矩阵式全景诊断状态（各 ID 交付进度一目了然）；④**向下无缝兼容**：单 ID 行为、环境变量及超时配置与 v2.19.0 完全等价；Backlog 落地见 `docs/backlogs/03-baton-wait-multi-id-lightweight-pubsub.md`。
 > **v2.19.0 变更（2026-11-08 · 引入执行方交付平息缓冲期 Settle Window · 解决长任务状态快照超时与回执待交付死等 · 默认等待超时提升至 60m · 彻底杜绝会话未完抢跑闭环 · 动 STUB_BODY ⇒ 各载体须重跑 baton install）**：动因——下游实测反馈两项核心痛点：①执行方刚打上 `delivered` 戳，发起方探针毫秒级唤醒并抢跑闭环，导致执行方 Agent 对话尚未收尾、后置清理或总结未完即被抢先锁定事实；②复杂任务执行超过 30m 或执行方仅登记回执草稿（`received`）未跑 `deliver` 时，发起方探针死等直至 30m 报超时 Exit 124，误导人类与发起方。①**会话平息缓冲期（Settle Window）**：`cmdWait` 检测到终态交付（`delivered`）信号后，默认静默等待 10s（`--settle` / `BATON_SETTLE_DELAY` 可配）平息缓冲，期间若检测到文件写入活动自动顺延重置，确保执行方 Agent 会话彻底结束退出后再 Exit 0 唤醒发起方，彻底杜绝毫秒级抢跑竞态；②**等待超时与保活机制升级**：`baton wait` 默认超时由 30m 提升至 **60m**（支持 `BATON_WAIT_TIMEOUT` 全局配置），每 5 分钟输出微量保活心跳防止 Agent 管道误杀；③**回执超时精准诊断**：若超时退出时回执已存在（status: received），探针输出清晰诊断与救砖建议，指明系执行方漏跑 `deliver` 所致，杜绝假超时困惑；④**状态快照宽容自动续期**：执行方收尾执行 `receipt`/`deliver` 时，若 60m status 快照已过期但此前曾查验过，自动续期快照时间戳，避免长任务收尾被粗暴打断；⑤**入站操作序列纠偏**：明确规范「回执登记 `receipt` → 校验自检 `check` → 终态交付 `deliver`」，确保交付是执行方会话的最末动作。
 > **v2.18.0 变更（2026-11-07 · 引入执行方终态交付机制 baton deliver · 彻底根治跨仓与多会话抢跑闭环竞态 · 状态机五态升级 · 动 STUB_BODY ⇒ 各载体须重跑 baton install）**：动因——Tappy 跨仓交接实证（2026-11-07）暴露核心时序竞态：执行方仅生成回执文件草稿尚未完成自检或收尾，`cmdWait` 探针仅据「mtime 变动 + 文件存在」即擅自翻 `received` 并提前唤醒发起方；发起方随之抢跑 `accept` 闭环并提前改写主线 Backlog，导致执行方会话尚未结束、事实却已被锁定的时序失控。①**显式终态交付（Explicit Final Delivery）**：引入全新子命令 `baton deliver <id>`（及原子复合选项 `baton receipt <id> --deliver`），由执行方在自检全过、会话收尾时显式提交终态交付，烙印 `delivered_at` 时间戳与 `delivered` 状态；②**探针抢跑彻底根治（Anti-Premature Wakeup）**：`cmdWait` 跨仓探针移除「回执变动自动翻 `received`」的脆弱逻辑，仅在检测到执行方显式交付（`delivered`/`closed`）后方 Exit 0 唤醒发起方；③**闭环硬门禁强化（Anti-Race Accept Gate）**：`cmdAccept` 增设 `delivered_at` 硬门禁，无显式交付声明一律拒绝闭环（Exit 1）；防提前闭环从仓内扩展至跨仓双向校验；闭环时写入 `accepted_at` 与 `delivered_at`，达成全生命周期审计链闭环；④**五态确定性状态机（5-State Lifecycle）**：`draft → forwarded → received → delivered → closed`，`handoff-status.mjs` 与 Mermaid 全面支持；⑤**存量无缝向前兼容（Legacy Exemption）**：自动豁免 2026-11-08 前的历史存量工单，保证现有 120 份交接 0 报错平滑升级；⑥**契约硬约束**：明确发起方在收到执行方显式交付前，严禁将未定稿回执写入主线规划或 Backlog。
@@ -343,18 +344,21 @@ Agent 发现待处理任务的规范行为：
 
 <!-- handoff-stub:v2.1 begin -->
 <!-- generated — do not edit -->
-<!-- stub:sha256:bb21f81d -->
-### Agent Baton (Handoff) 接入桩（强制守卫 · 细则以 $(lab path handoffs)/README.md 契约 v2.20.0 为准）
+<!-- stub:sha256:6dbc9c1c -->
+### Agent Baton (Handoff) 接入桩（强制守卫 · 细则以 $(lab path handoffs)/README.md 契约 v2.21.0 为准）
 
 **早拦 Preflight（强制）**
 - **命令形态**：一律 `baton <op>` 或 `handoff <op>`（PATH shim → 中央引擎；幂等自愈 `baton link`）。若报 command not found：运行 `baton link`（或 `handoff link`）自愈（或通过 lab-agent-toolkit 重新 `npm link`）。
 - 调用 `show/receipt/deliver/accept/reject/check` 前，**必须先跑** `baton status`（或 `handoff status`，执行方冷启动用 `baton status --for <本方 lane|target>` 直取本方待办）且其输出在上下文中。
 - **状态语义（v2.20.0 · 五态生命周期）**：「进行中」= 未闭环（`status ≠ closed`）且归属当前方。**待办 = `draft` + `forwarded`**——落我归属即该我动工；`received` = 回执草稿已登记（待执行方交付）；`delivered` = 执行方已完成终态交付（等待发起方验收）；`closed` = 审计闭环完成。
 - **终态交付与平息机制（v2.20.0 · 防抢跑竞态与会话平息）**：回执文件落盘不等于会话结束。执行方必须通过 `baton deliver <ID>`（或 `baton receipt <ID> --deliver`）显式标记终态交付；探针检测到交付信号后启动平息缓冲（Settle Window），等待执行方会话彻底收尾退出后方 Exit 0 唤醒发起方。未 deliver 之前发起方 wait 探针不唤醒、accept 硬拒闭环。发起方严禁在收到显式交付信号前提前修改 Backlog 或规划文档。
+- **物理工作树隔离（v2.21.0 · workspace: worktree）**：支持 `workspace: worktree`，自动在 `.worktrees/<id>` 下创建轻量沙箱并软链共享构建缓存（`node_modules`、`target`、`.venv`），主仓库零污染且构建零损耗。工单闭环时使用 `baton close <ID> --prune-worktree` 自动安全回收。
+- **注意力节流管道（v2.21.0 · baton throttle）**：执行方在后台长任务运行时，推荐使用 `baton throttle <ID> -- <cmd>` 包装运行。三级中断过滤机制阻断日志刷屏对人类与主控上下文的注意力劫持（仅致命错误红灯突破，常规流直接静默落盘）。
+- **无污染双盲重跑（v2.21.0 · clean-runner / baton-audit-runner）**：审计方验收时，推荐使用 `baton-audit-runner <ID>` 在干净上下文独立重跑验收判据命令，自动校验真实 Exit Code 并固化 `--evidence-commits` 与 `--evidence-paths`。
 - 指定 ID 必须在「进行中」且归属当前方（仓内：`to_lane == 当前 lane`；跨仓：落在目标收件箱且未闭环）。找不到→停下并说明。
 - 未指定 ID 却有多条归属当前方的待办（draft/forwarded）→ 列出清单请用户点名，不擅自选。
 - receipt 前确保 status 快照 **< 60 分钟**（超时重跑；长任务收尾时 deliver 自动宽容续期）。
-- 仓内优先读 frontmatter `workspace`（same/separate），禁用 mtime 推断。
+- 仓内优先读 frontmatter `workspace`（same/separate/worktree），禁用 mtime 推断。
 - 执行方**只写 receipt / deliver**，**不做 accept/reject**。
 - **严禁抢跑/虚假回执**：验收判据**全部实测通过**方可提交回执与交付。执行中途遇阻、环境/多实例冲突或需讨论的中间状态，**仅记录于 reviews/ 或对话说明，严禁提交包含「已通过」的抢跑回执**。
 - 回执正文唯一源 = `$(lab path handoffs)/RESPONSE-TEMPLATE.md`：**照抄其「回执模板（可直接复制）」骨架**（含 evidence 字段），勿另起格式、勿凭记忆重建（骨架外 = 没有）。

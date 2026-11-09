@@ -121,3 +121,13 @@ baton install [--project] [--global]
 ```bash
 baton link [--remove]
 ```
+
+### `baton throttle`
+使用三级中断节流管道包装后台执行命令，阻断日志刷屏对人类与主控上下文的注意力劫持。
+```bash
+baton throttle <id> [--quiet] [--timeout <ms>] -- <command>
+```
+*三级中断机制*：
+- 🟢 **绿灯流（常规输出）**：直接静默落盘至 `.handoffs/logs/<id>.throttle.log`。
+- 🟡 **黄灯流（告警重试）**：抑制刷屏，保留轻量聚合计数器。
+- 🔴 **红灯流（致命崩溃）**：突破静默屏障，即时中断并向主控 Agent 发送高优先级告警。
