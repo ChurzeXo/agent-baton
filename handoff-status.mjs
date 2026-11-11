@@ -136,6 +136,7 @@ for (const f of hFiles) {
     needs: fm.needs_iggle_change,
     created: fm.created || '',
     closed: fm.closed || '',
+    delivered_at: fm.delivered_at || '',
     file: `handoffs/${f}`,
   };
   // 仓内模式：target 位复用为 to_lane，并补 from_lane / needs_change。跨仓 v1 schema 字段保持冻结。
@@ -154,7 +155,7 @@ for (const f of rFiles) {
   try { fm = parseFM(fs.readFileSync(path.join(R_DIR, f), 'utf8')); } catch {}
   rFmMap.set(f, fm);
   const id = (fm && fm.handoff_id) || f.replace(/-resp\.md$/i, '').replace(/\.md$/i, '');
-  receipts[id] = { file: `receipts/${f}`, needs: fm && fm.needs_iggle_change };
+  receipts[id] = { file: `receipts/${f}`, needs: fm && fm.needs_iggle_change, delivered_at: fm && fm.delivered_at };
 }
 
 // ── 规范性校验（直接利用内存缓存，0 重复磁盘 I/O）──
@@ -173,16 +174,104 @@ for (const f of rFiles) {
   if (!handoffs[id]) warnings.push(`回执找不到对应交接：${f} (id=${id})`);
 }
 
+function formatDurationShort(ms) {
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  return `${hr}h`;
+}
+
+function getWatchInfo(id) {
+  const watchFile = path.join(ROOT, '.watch', `${id}.json`);
+  let isAlive = false;
+  let data = null;
+  if (fs.existsSync(watchFile)) {
+    try {
+      data = JSON.parse(fs.readFileSync(watchFile, 'utf8'));
+      if (data && data.pid) {
+        try {
+          process.kill(data.pid, 0);
+          isAlive = true;
+        } catch (e) {
+          if (e.code === 'EPERM') {
+            isAlive = true;
+          } else {
+            isAlive = false;
+            try { fs.unlinkSync(watchFile); } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+  if (isAlive && data) {
+    const started = data.started_at ? new Date(data.started_at).getTime() : 0;
+    const elapsed = started ? Math.max(0, Date.now() - started) : 0;
+    const durStr = formatDurationShort(elapsed);
+    return {
+      listening: true,
+      pid: data.pid,
+      started_at: data.started_at,
+      duration: durStr,
+      text: `监听: pid ${data.pid} (${durStr})`
+    };
+  }
+  return {
+    listening: false,
+    text: `⚠️ 无监听`
+  };
+}
+
+function getCreatedTime(r) {
+  if (r.created) {
+    const t = new Date(r.created).getTime();
+    if (!isNaN(t)) return t;
+  }
+  try {
+    const hFile = path.join(ROOT, r.file);
+    return fs.statSync(hFile).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+function isReceivedIdle(r) {
+  if (r.status !== 'received') return false;
+  if (r.delivered_at) return false;
+  const hFm = hFmMap.get(path.basename(r.file));
+  if (hFm && hFm.delivered_at) return false;
+  const rObj = receipts[r.id];
+  if (rObj && rObj.delivered_at) return false;
+  const cTime = getCreatedTime(r);
+  if (!cTime) return false;
+  return (Date.now() - cTime) >= 10 * 60 * 1000;
+}
+
+function formatRowLine(r, isZh) {
+  const receiptPart = r.receiptFile ? '  ' + (isZh ? '回执:' : 'Receipt:') + r.receiptFile : '';
+  const watch = getWatchInfo(r.id);
+  const idle = isReceivedIdle(r);
+  const idleAlert = idle ? (isZh ? '  ⚠️ [空转告警: received 超 10m 未 deliver]' : '  ⚠️ [空转告警 / Idle Warning: received >10m without deliver]') : '';
+  return `  - ${r.id}  ${r.file}${receiptPart}  [${watch.text}]${idleAlert}`;
+}
+
 const rows = Object.values(handoffs).map(h => ({
   ...h,
   hasReceipt: !!receipts[h.id],
   receiptFile: receipts[h.id] ? receipts[h.id].file : '',
 }));
 
+for (const r of rows) {
+  if (isReceivedIdle(r)) {
+    warnings.push(`[空转告警] 交接 ${r.id} 处于 received 状态超过 10 分钟且未 deliver（发起方监听无法唤醒，请尽快运行 baton deliver ${r.id} 确认交付）`);
+  }
+}
+
 const open = rows.filter(r => r.status !== 'closed');
 const byStatus = {};
 for (const r of open) (byStatus[r.status] = byStatus[r.status] || []).push(r);
-const receiptButStale = open.filter(r => r.hasReceipt && r.status !== 'received' && r.status !== 'closed');
+const receiptButStale = open.filter(r => r.hasReceipt && r.status !== 'received' && r.status !== 'delivered' && r.status !== 'closed');
 
 // ── 下一步导航 ──
 // 状态名中文化 + 每项给出「谁该做什么」，消除「看到状态名却不知下一步」的记忆负担。
@@ -225,7 +314,7 @@ function nextStep(r) {
   const t = (r.target || '').toLowerCase();
   switch (r.status) {
     case 'draft':
-      if (t === 'coreml') return isZh ? '同工作区，无需转递：切 coreml 角色执行 → 写回执' : 'Same workspace: switch to coreml role → write receipt';
+      if (t === 'coreml') return isZh ? '同工作区，不用请人转交：切 coreml 角色直接做 → 写回执' : 'Same workspace: switch to coreml role → write receipt';
       if (t === 'iggle') return isZh ? '依赖方发起，iggle 侧适配本仓' : 'Initiated by dependency, adapter work';
       return isZh ? `待转递：输 /inbox 生成收件箱转给 ${t}` : `Pending forward: pass to ${t}`;
     case 'forwarded':
@@ -330,7 +419,7 @@ if (FOR) {
       if (todo.length) {
         lines.push(`- 待 ${FOR} 处理（${todo.length}）:`);
         for (const r of todo) {
-          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+          lines.push(formatRowLine(r, true));
           const step = nextStepFor(r);
           if (step) lines.push(`      → 下一步：${step}`);
         }
@@ -338,7 +427,7 @@ if (FOR) {
       if (recv.length) {
         lines.push(`- 已写回执待终态交付（${recv.length}）:`);
         for (const r of recv) {
-          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+          lines.push(formatRowLine(r, true));
           const step = nextStepFor(r);
           if (step) lines.push(`      → 下一步：${step}`);
         }
@@ -348,7 +437,7 @@ if (FOR) {
           ? `- 已交付待发起 lane 实测（${deliv.length}）:`
           : `- 已交付待发起方实测（${deliv.length}）:`);
         for (const r of deliv) {
-          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+          lines.push(formatRowLine(r, true));
           const step = nextStepFor(r);
           if (step) lines.push(`      → 下一步：${step}`);
         }
@@ -366,7 +455,7 @@ if (FOR) {
       if (todo.length) {
         lines.push(`- Pending for ${FOR} (${todo.length}):`);
         for (const r of todo) {
-          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+          lines.push(formatRowLine(r, false));
           const step = nextStepFor(r);
           if (step) lines.push(`      → Next step: ${step}`);
         }
@@ -374,7 +463,7 @@ if (FOR) {
       if (recv.length) {
         lines.push(`- Draft receipts awaiting final delivery (${recv.length}):`);
         for (const r of recv) {
-          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+          lines.push(formatRowLine(r, false));
           const step = nextStepFor(r);
           if (step) lines.push(`      → Next step: ${step}`);
         }
@@ -384,7 +473,7 @@ if (FOR) {
           ? `- Delivered, awaiting initiator verification (${deliv.length}):`
           : `- Delivered, awaiting verification (${deliv.length}):`);
         for (const r of deliv) {
-          lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+          lines.push(formatRowLine(r, false));
           const step = nextStepFor(r);
           if (step) lines.push(`      → Next step: ${step}`);
         }
@@ -422,7 +511,7 @@ if (isZh) {
     for (const [label, arr] of buckets) {
       lines.push(`- ${label}（${arr.length}）:`);
       for (const r of arr) {
-        lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  回执:' + r.receiptFile : ''}`);
+        lines.push(formatRowLine(r, true));
         const step = nextStep(r);
         if (step) lines.push(`      → 下一步：${step}`);
       }
@@ -455,7 +544,7 @@ if (isZh) {
     for (const [label, arr] of buckets) {
       lines.push(`- ${label} (${arr.length}):`);
       for (const r of arr) {
-        lines.push(`  - ${r.id}  ${r.file}${r.receiptFile ? '  Receipt:' + r.receiptFile : ''}`);
+        lines.push(formatRowLine(r, false));
         const step = nextStep(r);
         if (step) lines.push(`      → Next step: ${step}`);
       }

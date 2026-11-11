@@ -55,6 +55,12 @@ date: YYYY-MM-DD
 
 ## 遗留与建议 (Notes & Follow-ups)
 <Optional notes for downstream maintainers or next steps>
+
+## 转递提示词 (Baton Pass Prompt)
+> 复制下方提示词转告发起方（同对话多工单精准路由对齐）：
+```text
+请【<author-lane-role>】查收【<receiving-lane-role>】回执 [<ID>]：receipts/<ID>-resp.md（<Verdict> · 需发起方改动：<是/否>）
+```
 ```
 
 ---
